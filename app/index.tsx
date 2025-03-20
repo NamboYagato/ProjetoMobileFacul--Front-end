@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 import {
   View,
   ScrollView,
   Image,
   TouchableOpacity,
   Text,
+  TextInput,
   StyleSheet,
+  ImageBackground,
 } from "react-native";
 import { Link } from "expo-router";
 import axios from "axios";
@@ -38,7 +41,7 @@ export default function HomeScreen() {
     retrive();
   }, []);
 
-  console.log(data);
+  // console.log(data);
 
   const imageMap: { [key: number]: string } = {
     1: "https://villalvafrutas.com.br/wp-content/uploads/2020/08/Frango-agridoce.jpg",
@@ -52,18 +55,32 @@ export default function HomeScreen() {
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
     >
+      <View style={styles.viewTextField}>
+        <TextInput
+          style={styles.textField}
+          placeholder="Busque por uma receita."
+        />
+      </View>
+
+      <View style={styles.catalog}>
+        <Text>Ver todas as receitas</Text>
+      </View>
+
       {data &&
-        data.map((item, i) => {
-          const imageUrl =
-            imageMap[item.id] ||
-            "https://gourmetjr.com.br/wp-content/uploads/2018/03/JPEG-image-B6230B799E47-1_1170x600_acf_cropped_490x292_acf_cropped.jpeg";
-          return (
-            <View style={styles.card} key={i}>
-              <Image source={{ uri: imageUrl }} style={styles.image} />
+        data.map((item) => (
+          <Link
+            key={item.id}
+            href={{
+              pathname: "/receita/[id]",
+              params: { id: item.id },
+            }}
+          >
+            <View style={styles.card}>
+              <Image source={{ uri: imageMap[item.id] }} style={styles.image} />
               <Text>{item.receita}</Text>
             </View>
-          );
-        })}
+          </Link>
+        ))}
     </ScrollView>
   );
 }
@@ -90,6 +107,27 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 150,
+    borderRadius: 10,
+  },
+  viewTextField: {
+    alignContent: "center",
+    width: "80%",
+  },
+  textField: {
+    borderWidth: 2,
+    borderStyle: "solid",
+    borderColor: "grey",
+    borderRadius: 10,
+    marginTop: 20,
+    padding: 10,
+  },
+  catalog: {
+    width: "80%",
+    height: 100,
+    marginTop: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#d88b2d",
     borderRadius: 10,
   },
 });
