@@ -28,7 +28,7 @@ export default function ReceitaScreen() {
   }, [id]);
 
   if (!receita) {
-    return <Text>Carregando...</Text>;
+    return <Text>Carregando... </Text>;
   }
 
   return (
