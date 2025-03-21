@@ -13,7 +13,6 @@ type receita = {
 
 export default function ReceitaScreen() {
   const { id } = useLocalSearchParams();
-
   const [data, setData] = useState<receita>();
 
   async function fetchContent() {
@@ -43,7 +42,7 @@ export default function ReceitaScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       {/* O id não vai aparecer */}
       {/* Removed data?.id display */}
 
@@ -52,6 +51,17 @@ export default function ReceitaScreen() {
 
       {/* Aparecer abaixo de "data?.receita", mas no começo do texto da receita e um pouco menor que "data?.receita" */}
       <Text style={styles.recipeType}>{data?.tipo}</Text>
+
+      {data && (
+        <Image
+          source={{
+            uri:
+              imageMap[data.id] ||
+              "https://gourmetjr.com.br/wp-content/uploads/2018/03/JPEG-image-B6230B799E47-1_1170x600_acf_cropped_490x292_acf_cropped.jpeg",
+          }}
+          style={styles.image}
+        />
+      )}
 
       <View style={styles.contentContainer}>
         {/* no meio da tela dando wrap */}
@@ -62,7 +72,7 @@ export default function ReceitaScreen() {
         <Text style={styles.sectionTitle}>Modo de Preparo:</Text>
         <Text style={styles.contentText}>{data?.modo_preparo}</Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -98,5 +108,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     width: "100%",
     flexWrap: "wrap",
+    marginBottom: 10,
+  },
+  image: {
+    width: "100%",
+    height: "40%",
+    borderRadius: 10,
   },
 });
