@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   ScrollView,
@@ -47,7 +47,10 @@ export default function ReceitasScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor="rgba(209, 94, 94, 0.8)" barStyle="light-content" />
+      <StatusBar
+        backgroundColor="rgba(209, 94, 94, 0.8)"
+        barStyle="light-content"
+      />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Aproveite</Text>
       </View>
@@ -78,85 +81,85 @@ export default function ReceitasScreen() {
   );
 }
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 const cardWidth = width * 0.9;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(209, 94, 94, 0.8)',
+    backgroundColor: "rgba(209, 94, 94, 0.8)",
   },
   header: {
-    backgroundColor: '#D10000',
+    backgroundColor: "#D10000",
     paddingVertical: 20,
     paddingHorizontal: 16,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: "#F8F8F8",
   },
   scrollContent: {
     paddingVertical: 16,
     paddingHorizontal: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cardContainer: {
     width: cardWidth,
     marginBottom: 20,
     borderRadius: 12,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   card: {
-    width: '100%',
+    width: "100%",
     height: 200,
     borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    position: 'relative',
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    position: "relative",
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     borderRadius: 12,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: "rgba(0,0,0,0.3)",
     borderRadius: 12,
   },
   recipeInfo: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: 'rgba(209, 94, 94, 0.8)',
+    backgroundColor: "rgba(209, 94, 94, 0.8)",
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },
   recipeTitle: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   recipeType: {
-    color: '#F0F0F0',
+    color: "#F0F0F0",
     fontSize: 14,
   },
 });
