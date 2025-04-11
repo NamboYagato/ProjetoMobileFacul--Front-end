@@ -1,10 +1,20 @@
 import { Stack } from "expo-router";
+import { AuthProvider } from "./context/AuthContext";
 
 export default function Layout() {
   return (
-    <Stack>
+    <AuthProvider>
+      <Stack>
       <Stack.Screen
         name="index"
+        options={{ title: "", headerShown: false }}
+      />
+      <Stack.Screen
+      name="register"
+      options={{ title: "", headerShown: false }}
+      />
+      <Stack.Screen
+        name="home"
         options={{ title: "Home", headerShown: false }}
       />
       <Stack.Screen
@@ -16,5 +26,6 @@ export default function Layout() {
         options={{ title: "Detalhe da Receita", headerShown: false }}
       />
     </Stack>
+    </AuthProvider>
   );
 }

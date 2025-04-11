@@ -1,4 +1,4 @@
-// LoginScreen.tsx
+// RegisterScreen.tsx
 import React, { useState, useContext, useEffect } from "react";
 import {
   View,
@@ -9,28 +9,36 @@ import {
   StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { AuthContext } from "./context/AuthContext"; // ajuste o caminho conforme sua estrutura
+import { AuthContext } from "./context/AuthContext";
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
-  const { user, login } = useContext(AuthContext);
+  const { user, register } = useContext(AuthContext);
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState('');
+  const [senha, setSenha] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // Se usuário já estiver logado, redireciona para a Home
+  // Se o usuário já estiver logado, redireciona para a Home
   useEffect(() => {
     if (user) {
-      router.push("/home");
+      router.push("/");
     }
   }, [user]);
 
-  async function handleLogin() {
-    const success = await login(email, password);
+  async function handleRegister() {
+    // Validação simples para conferir se as senhas coincidem
+    if (!nome || !email || !senha) {
+      setErrorMessage("Preencha todos os campos");
+      return;
+    }
+
+    // Tente efetuar o registro utilizando a função disponível no contexto
+    const success = await register(nome, email, senha);
     if (success) {
-      router.push('/home'); // Redireciona para a home
+      router.push("/"); // Redireciona para a Home após o cadastro com sucesso
     } else {
-      setErrorMessage('Credenciais inválidas. Tente novamente.');
+      setErrorMessage("Erro ao registrar. Tente novamente.");
     }
   }
 
@@ -40,12 +48,20 @@ export default function LoginScreen() {
 
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Bem-vindo</Text>
-          <Text style={styles.headerSubtitle}>Entre na sua conta</Text>
+          <Text style={styles.headerTitle}>Criar Conta</Text>
+          <Text style={styles.headerSubtitle}>Preencha suas informações</Text>
         </View>
       </View>
 
       <View style={styles.formContainer}>
+        <TextInput
+          style={styles.inputField}
+          placeholder="Nome"
+          placeholderTextColor="#6b7280"
+          autoCapitalize="words"
+          onChangeText={setNome}
+          value={nome}
+        />
         <TextInput
           style={styles.inputField}
           placeholder="Email"
@@ -59,20 +75,22 @@ export default function LoginScreen() {
           style={styles.inputField}
           placeholder="Senha"
           placeholderTextColor="#6b7280"
-          secureTextEntry={true}
-          onChangeText={setPassword}
-          value={password}
+          secureTextEntry
+          onChangeText={setSenha}
+          value={senha}
         />
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Entrar</Text>
+        <TouchableOpacity style={styles.loginButton} onPress={handleRegister}>
+          <Text style={styles.loginButtonText}>Registrar</Text>
         </TouchableOpacity>
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {errorMessage ? (
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        ) : null}
       </View>
 
       <View style={styles.footerContainer}>
-        <Text style={styles.footerText}>Não tem uma conta?</Text>
-        <TouchableOpacity onPress={() => router.push("/register")}>
-          <Text style={styles.linkText}>Cadastre-se</Text>
+        <Text style={styles.footerText}>Já tem uma conta?</Text>
+        <TouchableOpacity onPress={() => router.push("/")}>
+          <Text style={styles.linkText}>Entre aqui</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -156,8 +174,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   errorText: {
-    color: 'red',
+    color: "red",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
