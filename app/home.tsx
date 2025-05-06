@@ -89,7 +89,7 @@ export default function HomeScreen() {
 
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.searchSection}>
@@ -114,7 +114,7 @@ export default function HomeScreen() {
               <Text style={styles.loadingText}>Carregando receitas...</Text>
             </View>
           ) : (
-            
+
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -201,35 +201,46 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
       <View style={styles.footer}>
-        <TouchableOpacity onPress={() => router.push("/home")}>
-          <View style={[styles.categoryIcon, { backgroundColor: "#f43f5e" }]}>
-            <Text style={styles.categoryIconText}>🏠</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/search")}>
-          <View style={[styles.categoryIcon, { backgroundColor: "#3b82f6" }]}>
-            <Text style={styles.categoryIconText}>🔍</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/upReceita")}>
-          <View style={[styles.categoryIcon, { backgroundColor: "#10b981" }]}>
-            <Text style={styles.categoryIconText}>➕</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/config")}>
-          <View style={[styles.categoryIcon, { backgroundColor: "#f59e0b" }]}>
-            <Text style={styles.categoryIconText}>⚙️</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/profile")}>
-          <View style={[styles.categoryIcon, { backgroundColor: "#8b5cf6" }]}>
-            <Text style={styles.categoryIconText}>👤</Text>
-          </View>
-        </TouchableOpacity>
+        <NavButton
+          icon="🏠"
+          route="home"
+          label="Home"
+          isActive={true}
+          isPrimary={false}
+          router={router}
+        />
+        <NavButton
+          icon="🔍"
+          route="search"
+          label="Buscar"
+          isActive={false}
+          isPrimary={false}
+          router={router}
+        />
+        <NavButton
+          icon="➕"
+          route="upReceita"
+          label="Criar"
+          isActive={false}
+          isPrimary={true}
+          router={router}
+        />
+        <NavButton
+          icon="⚙️"
+          route="config"
+          label="Config"
+          isActive={false}
+          isPrimary={false}
+          router={router}
+        />
+        <NavButton
+          icon="👤"
+          route="profile"
+          label="Perfil"
+          isActive={false}
+          isPrimary={false}
+          router={router}
+        />
       </View>
 
     </View>
@@ -238,6 +249,57 @@ export default function HomeScreen() {
 
 const { width } = Dimensions.get("window");
 const cardWidth = width * 0.7;
+
+// Adicione este componente antes do StyleSheet
+interface NavButtonProps {
+  icon: string;
+  route: string;
+  label: string;
+  isActive: boolean;
+  isPrimary: boolean;
+  router: any;
+}
+
+const NavButton: React.FC<NavButtonProps> = ({ 
+    icon, 
+    route, 
+    label, 
+    isActive, 
+    isPrimary, 
+    router 
+  }) => {
+    const handleNavigation = () => {
+        // Handle navigation with proper typing
+        router.push(route as any);
+      };
+  
+    return (
+      <TouchableOpacity 
+        style={styles.navButton} 
+        onPress={handleNavigation}
+        activeOpacity={0.7}
+      >
+        <View style={[
+          styles.iconContainer,
+          isPrimary && styles.primaryIconContainer,
+          isActive && styles.activeIconContainer
+        ]}>
+          <Text style={{
+            fontSize: isPrimary ? 24 : 20,
+            color: isPrimary ? "#fff" : (isActive ? "#111827" : "#64748b"),
+          }}>
+            {icon}
+          </Text>
+        </View>
+        <Text style={[
+          styles.navLabel,
+          isActive && styles.activeNavLabel
+        ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
 const styles = StyleSheet.create({
   mainContainer: {
@@ -395,17 +457,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  categoryIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  categoryIconText: {
-    fontSize: 24,
-  },
   categoryText: {
     fontSize: 14,
     fontWeight: "500",
@@ -432,17 +483,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  categoryIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  categoryIconText: {
+    fontSize: 24,
+  },
+  // Adicione estes estilos ao seu objeto StyleSheet
   footer: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    paddingVertical: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f1f5f9",
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
   },
+  navButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: width / 5 - 10,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  primaryIconContainer: {
+    backgroundColor: "#d1545e", // Alterado para combinar com o botão de busca
+    shadowColor: "#d1545e", // Alterado para combinar
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  activeIconContainer: {
+    backgroundColor: "#f1f5f9", // Alterado para um tom mais claro
+  },
+  navLabel: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  activeNavLabel: {
+    color: "#111827", // Alterado para combinar com o tema
+    fontWeight: "500",
+  },
+ 
 });
