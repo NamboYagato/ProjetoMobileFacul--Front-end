@@ -57,7 +57,7 @@ export default function Config() {
       {/* Sobre o App */}
       <TouchableOpacity
         style={styles.optionButton}
-        onPress={() => router.push("/config/sobre")}
+        onPress={() => router.push("/config/sobreoAplicativo")}
       >
         <Ionicons name="information-circle-outline" size={20} color="#3b82f6" />
         <Text style={styles.optionButtonText}>Sobre o aplicativo</Text>

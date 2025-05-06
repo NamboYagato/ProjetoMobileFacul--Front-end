@@ -8,12 +8,13 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
-  Dimensions
+  Dimensions,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-type ToastType = "success" | "error";
 
+type ToastType = "success" | "error";
 
 type ToastState = {
   visible: boolean;
@@ -27,6 +28,7 @@ type ToastProps = {
   type: ToastType;
   onDismiss: () => void;
 };
+
 // Toast notification component
 const Toast = ({ visible, message, type, onDismiss }: ToastProps) => {
   const opacity = useState(new Animated.Value(0))[0];
@@ -45,9 +47,7 @@ const Toast = ({ visible, message, type, onDismiss }: ToastProps) => {
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start(() => {
-        onDismiss();
-      });
+      ]).start(onDismiss);
     }
   }, [visible]);
 
@@ -57,8 +57,8 @@ const Toast = ({ visible, message, type, onDismiss }: ToastProps) => {
     <Animated.View
       style={[
         styles.toast,
-        { opacity },
         type === "error" ? styles.toastError : styles.toastSuccess,
+        { opacity },
       ]}
     >
       <Text style={styles.toastText}>{message}</Text>
@@ -75,9 +75,9 @@ export default function AlterarSenha() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Toast state
-  const [toast, setToast] = useState<ToastState>  ({
+  const [toast, setToast] = useState<ToastState>({
     visible: false,
     message: "",
     type: "success",
@@ -86,42 +86,29 @@ export default function AlterarSenha() {
   const showToast = (message: string, type: ToastType = "success") => {
     setToast({ visible: true, message, type });
   };
-
-  const hideToast = () => {
-    setToast((prev) => ({ ...prev, visible: false }));
-  };
+  const hideToast = () => setToast((t) => ({ ...t, visible: false }));
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       showToast("Por favor, preencha todos os campos", "error");
       return;
     }
-
     if (newPassword !== confirmPassword) {
       showToast("A nova senha e a confirmação devem ser iguais", "error");
       return;
     }
-
     if (newPassword.length < 6) {
       showToast("A senha deve ter pelo menos 6 caracteres", "error");
       return;
     }
 
     setIsLoading(true);
-
     try {
-      // Aqui você faria a chamada à sua API para alterar a senha
-      // Exemplo fictício:
-      // await api.changePassword(currentPassword, newPassword);
-      
-      // Simulando uma requisição assíncrona
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      // chamada à API...
+      await new Promise((r) => setTimeout(r, 1500));
       showToast("Sua senha foi alterada com sucesso!");
-      setTimeout(() => {
-        navigation.goBack();
-      }, 2000);
-    } catch (error) {
+      setTimeout(() => navigation.goBack(), 2000);
+    } catch {
       showToast("Verifique sua senha atual e tente novamente.", "error");
     } finally {
       setIsLoading(false);
@@ -130,117 +117,62 @@ export default function AlterarSenha() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={hideToast}
-      />
-      
+      <Toast {...toast} onDismiss={hideToast} />
+
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.iconContainer}>
-            <Ionicons name="key" size={24} color="#6366f1" />
+            <Ionicons name="key" size={24} color="#FF6B35" />
           </View>
           <Text style={styles.title}>Alterar Senha</Text>
           <Text style={styles.subtitle}>
             Atualize sua senha para manter sua conta segura
           </Text>
         </View>
-        
+
         <View style={styles.cardContent}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Senha Atual</Text>
-            <View style={styles.passwordInput}>
-              <TextInput
-                style={styles.input}
-                secureTextEntry={!showCurrentPassword}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="Digite sua senha atual"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons
-                  name={showCurrentPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#6b7280"
+          {[
+            { label: "Senha Atual", value: currentPassword, setter: setCurrentPassword, show: showCurrentPassword, toggle: () => setShowCurrentPassword((s) => !s) },
+            { label: "Nova Senha", value: newPassword, setter: setNewPassword, show: showNewPassword, toggle: () => setShowNewPassword((s) => !s) },
+            { label: "Confirmar Nova Senha", value: confirmPassword, setter: setConfirmPassword, show: showConfirmPassword, toggle: () => setShowConfirmPassword((s) => !s) },
+          ].map(({ label, value, setter, show, toggle }, i) => (
+            <View key={i} style={styles.inputContainer}>
+              <Text style={styles.label}>{label}</Text>
+              <View style={styles.passwordInput}>
+                <TextInput
+                  style={styles.input}
+                  secureTextEntry={!show}
+                  value={value}
+                  onChangeText={setter}
+                  placeholder={label}
+                  placeholderTextColor="#9ca3af"
+                  autoCapitalize="none"
                 />
-              </TouchableOpacity>
+                <TouchableOpacity onPress={toggle} style={styles.eyeIcon}>
+                  <Ionicons
+                    name={show ? "eye-off" : "eye"}
+                    size={20}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nova Senha</Text>
-            <View style={styles.passwordInput}>
-              <TextInput
-                style={styles.input}
-                secureTextEntry={!showNewPassword}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Digite sua nova senha"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowNewPassword(!showNewPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons
-                  name={showNewPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#6b7280"
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirmar Nova Senha</Text>
-            <View style={styles.passwordInput}>
-              <TextInput
-                style={styles.input}
-                secureTextEntry={!showConfirmPassword}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Confirme sua nova senha"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#6b7280"
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+          ))}
         </View>
-        
+
         <View style={styles.cardFooter}>
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              isLoading ? styles.buttonDisabled : styles.buttonPrimary,
+            ]}
             onPress={handleChangePassword}
             disabled={isLoading}
           >
             {isLoading ? (
-              <View style={styles.buttonContent}>
-                <ActivityIndicator size="small" color="#ffffff" />
-                <Text style={styles.buttonText}>Alterando...</Text>
-              </View>
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <View style={styles.buttonContent}>
-                <Ionicons name="lock-closed" size={18} color="#ffffff" style={styles.buttonIcon} />
-                <Text style={styles.buttonText}>Alterar Senha</Text>
-              </View>
+              <Text style={styles.buttonText}>Alterar Senha</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -249,39 +181,47 @@ export default function AlterarSenha() {
   );
 }
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 16,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#F8F9FA",
     alignItems: "center",
     justifyContent: "center",
   },
   card: {
     width: "100%",
     maxWidth: 400,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFF",
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#EEE",
     overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   cardHeader: {
     padding: 20,
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    borderBottomColor: "#EEE",
   },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#ede9fe",
+    backgroundColor: "rgba(255,107,53,0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -289,43 +229,38 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#333",
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
-    color: "#64748b",
+    color: "#666",
     textAlign: "center",
   },
   cardContent: {
     padding: 20,
   },
-  cardFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-  },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: 8,
     color: "#334155",
+    marginBottom: 8,
   },
   passwordInput: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#EEE",
     borderRadius: 8,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFF",
   },
   input: {
     flex: 1,
-    height: 50,
+    height: 48,
     fontSize: 16,
     color: "#334155",
     paddingHorizontal: 12,
@@ -333,26 +268,26 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 12,
   },
+  cardFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#EEE",
+  },
   button: {
-    backgroundColor: "#6366f1",
+    width: "100%",
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
+  buttonPrimary: {
+    backgroundColor: "#FF6B35",
+  },
   buttonDisabled: {
-    backgroundColor: "#a5b4fc",
-  },
-  buttonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonIcon: {
-    marginRight: 8,
+    backgroundColor: "rgba(255,107,53,0.5)",
   },
   buttonText: {
-    color: "white",
+    color: "#FFF",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -361,24 +296,29 @@ const styles = StyleSheet.create({
     top: 40,
     left: width * 0.1,
     right: width * 0.1,
-    backgroundColor: "#4ade80",
     padding: 16,
     borderRadius: 8,
     zIndex: 1000,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  toastError: {
-    backgroundColor: "#f87171",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
   },
   toastSuccess: {
-    backgroundColor: "#4ade80",
+    backgroundColor: "#4ADE80",
+  },
+  toastError: {
+    backgroundColor: "#F87171",
   },
   toastText: {
-    color: "white",
+    color: "#FFF",
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
