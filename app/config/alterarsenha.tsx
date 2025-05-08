@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+"use client"
+
+import { useState, useEffect } from "react"
 import {
   View,
   Text,
@@ -10,28 +12,28 @@ import {
   Animated,
   Dimensions,
   Platform,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+} from "react-native"
+import { useRouter } from "expo-router"
+import { Ionicons } from "@expo/vector-icons"
 
-type ToastType = "success" | "error";
+type ToastType = "success" | "error"
 
 type ToastState = {
-  visible: boolean;
-  message: string;
-  type: ToastType;
-};
+  visible: boolean
+  message: string
+  type: ToastType
+}
 
 type ToastProps = {
-  visible: boolean;
-  message: string;
-  type: ToastType;
-  onDismiss: () => void;
-};
+  visible: boolean
+  message: string
+  type: ToastType
+  onDismiss: () => void
+}
 
 // Toast notification component
 const Toast = ({ visible, message, type, onDismiss }: ToastProps) => {
-  const opacity = useState(new Animated.Value(0))[0];
+  const opacity = useState(new Animated.Value(0))[0]
 
   useEffect(() => {
     if (visible) {
@@ -47,146 +49,189 @@ const Toast = ({ visible, message, type, onDismiss }: ToastProps) => {
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start(onDismiss);
+      ]).start(onDismiss)
     }
-  }, [visible]);
+  }, [visible])
 
-  if (!visible) return null;
+  if (!visible) return null
 
   return (
-    <Animated.View
-      style={[
-        styles.toast,
-        type === "error" ? styles.toastError : styles.toastSuccess,
-        { opacity },
-      ]}
-    >
+    <Animated.View style={[styles.toast, type === "error" ? styles.toastError : styles.toastSuccess, { opacity }]}>
       <Text style={styles.toastText}>{message}</Text>
     </Animated.View>
-  );
-};
+  )
+}
 
 export default function AlterarSenha() {
-  const navigation = useNavigation();
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const router = useRouter()
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // Toast state
   const [toast, setToast] = useState<ToastState>({
     visible: false,
     message: "",
     type: "success",
-  });
+  })
 
   const showToast = (message: string, type: ToastType = "success") => {
-    setToast({ visible: true, message, type });
-  };
-  const hideToast = () => setToast((t) => ({ ...t, visible: false }));
+    setToast({ visible: true, message, type })
+  }
+  const hideToast = () => setToast((t) => ({ ...t, visible: false }))
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast("Por favor, preencha todos os campos", "error");
-      return;
+      showToast("Por favor, preencha todos os campos", "error")
+      return
     }
     if (newPassword !== confirmPassword) {
-      showToast("A nova senha e a confirmação devem ser iguais", "error");
-      return;
+      showToast("A nova senha e a confirmação devem ser iguais", "error")
+      return
     }
     if (newPassword.length < 6) {
-      showToast("A senha deve ter pelo menos 6 caracteres", "error");
-      return;
+      showToast("A senha deve ter pelo menos 6 caracteres", "error")
+      return
     }
 
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       // chamada à API...
-      await new Promise((r) => setTimeout(r, 1500));
-      showToast("Sua senha foi alterada com sucesso!");
-      setTimeout(() => navigation.goBack(), 2000);
+      await new Promise((r) => setTimeout(r, 1500))
+      showToast("Sua senha foi alterada com sucesso!")
+      setTimeout(() => router.back(), 2000)
     } catch {
-      showToast("Verifique sua senha atual e tente novamente.", "error");
+      showToast("Verifique sua senha atual e tente novamente.", "error")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
+
+  const handleGoBack = () => {
+    // Navigate back to the config page using expo-router
+    router.push("/config/config")
+  }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Toast {...toast} onDismiss={hideToast} />
+    <View style={styles.screenContainer}>
+      {/* Back button */}
+      <TouchableOpacity style={styles.backButton} onPress={handleGoBack} activeOpacity={0.7}>
+        <Ionicons name="arrow-back" size={24} color="#333" />
+      </TouchableOpacity>
 
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="key" size={24} color="#FF6B35" />
-          </View>
-          <Text style={styles.title}>Alterar Senha</Text>
-          <Text style={styles.subtitle}>
-            Atualize sua senha para manter sua conta segura
-          </Text>
-        </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Toast {...toast} onDismiss={hideToast} />
 
-        <View style={styles.cardContent}>
-          {[
-            { label: "Senha Atual", value: currentPassword, setter: setCurrentPassword, show: showCurrentPassword, toggle: () => setShowCurrentPassword((s) => !s) },
-            { label: "Nova Senha", value: newPassword, setter: setNewPassword, show: showNewPassword, toggle: () => setShowNewPassword((s) => !s) },
-            { label: "Confirmar Nova Senha", value: confirmPassword, setter: setConfirmPassword, show: showConfirmPassword, toggle: () => setShowConfirmPassword((s) => !s) },
-          ].map(({ label, value, setter, show, toggle }, i) => (
-            <View key={i} style={styles.inputContainer}>
-              <Text style={styles.label}>{label}</Text>
-              <View style={styles.passwordInput}>
-                <TextInput
-                  style={styles.input}
-                  secureTextEntry={!show}
-                  value={value}
-                  onChangeText={setter}
-                  placeholder={label}
-                  placeholderTextColor="#9ca3af"
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={toggle} style={styles.eyeIcon}>
-                  <Ionicons
-                    name={show ? "eye-off" : "eye"}
-                    size={20}
-                    color="#666"
-                  />
-                </TouchableOpacity>
-              </View>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="key" size={24} color="#FF6B35" />
             </View>
-          ))}
-        </View>
+            <Text style={styles.title}>Alterar Senha</Text>
+            <Text style={styles.subtitle}>Atualize sua senha para manter sua conta segura</Text>
+          </View>
 
-        <View style={styles.cardFooter}>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              isLoading ? styles.buttonDisabled : styles.buttonPrimary,
-            ]}
-            onPress={handleChangePassword}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Alterar Senha</Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.cardContent}>
+            {[
+              {
+                label: "Senha Atual",
+                value: currentPassword,
+                setter: setCurrentPassword,
+                show: showCurrentPassword,
+                toggle: () => setShowCurrentPassword((s) => !s),
+              },
+              {
+                label: "Nova Senha",
+                value: newPassword,
+                setter: setNewPassword,
+                show: showNewPassword,
+                toggle: () => setShowNewPassword((s) => !s),
+              },
+              {
+                label: "Confirmar Nova Senha",
+                value: confirmPassword,
+                setter: setConfirmPassword,
+                show: showConfirmPassword,
+                toggle: () => setShowConfirmPassword((s) => !s),
+              },
+            ].map(({ label, value, setter, show, toggle }, i) => (
+              <View key={i} style={styles.inputContainer}>
+                <Text style={styles.label}>{label}</Text>
+                <View style={styles.passwordInput}>
+                  <TextInput
+                    style={styles.input}
+                    secureTextEntry={!show}
+                    value={value}
+                    onChangeText={setter}
+                    placeholder={label}
+                    placeholderTextColor="#9ca3af"
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity onPress={toggle} style={styles.eyeIcon}>
+                    <Ionicons name={show ? "eye-off" : "eye"} size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.cardFooter}>
+            <TouchableOpacity
+              style={[styles.button, isLoading ? styles.buttonDisabled : styles.buttonPrimary]}
+              onPress={handleChangePassword}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Alterar Senha</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
-  );
+      </ScrollView>
+    </View>
+  )
 }
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get("window")
 
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+  },
+  backButton: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 50 : 20,
+    left: 16,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
   container: {
     flexGrow: 1,
     padding: 16,
+    paddingTop: Platform.OS === "ios" ? 80 : 60,
     backgroundColor: "#F8F9FA",
     alignItems: "center",
     justifyContent: "center",
@@ -323,4 +368,4 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: "center",
   },
-});
+})
