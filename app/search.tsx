@@ -243,8 +243,7 @@ export default function SearchScreen() {
           placeholderTextColor="#9CA3AF"
           value={query}
           onChangeText={setQuery}
-          onFocus={() => setIsSearchFocused(true)}
-          onBlur={() => setIsSearchFocused(false)}
+          
           underlineColorAndroid="transparent"
         />
         {query.length > 0 && (
@@ -321,7 +320,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 0  ,
       },
     }),
   },
