@@ -26,8 +26,8 @@ const suggestions = [
     title: "Frango Agridoce",
     image: "https://villalvafrutas.com.br/wp-content/uploads/2020/08/Frango-agridoce.jpg",
     prepTime: "30 min",
-    difficulty: "Médio",
-    categories: ["quick"], // Adicionando categorias para cada receita
+   
+    categories: ["SALGADOS", "Salgados"], // Adicionando categorias para cada receita
   },
   {
     id: 2,
@@ -35,16 +35,16 @@ const suggestions = [
     image:
       "https://www.estadao.com.br/resizer/xgbdreke8bix84U4ILBWMO_KuX0=/arc-anglerfish-arc2-prod-estadao/public/3K45SRWMQBAMHEOCORS3HY2W5I.jpg",
     prepTime: "25 min",
-    difficulty: "Fácil",
-    categories: ["easy", "vegetarian"],
+    
+    categories: ["SAUDAVEL", "Saudáveis"],
   },
   {
     id: 3,
     title: "Panquecas americanas",
     image: "https://img-global.cpcdn.com/recipes/c667062f7f96d825/1200x630cq70/photo.jpg",
     prepTime: "20 min",
-    difficulty: "Fácil",
-    categories: ["easy", "quick"],
+   
+    categories: ["DOCES_E_SOBREMESAS", "Sobremesas"],
   },
   {
     id: 4,
@@ -52,16 +52,16 @@ const suggestions = [
     image:
       "https://s2-receitas.glbimg.com/hQRLe4WjJRwT2W38WkkiTfB-Xq0=/0x0:1200x675/984x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_1f540e0b94d8437dbbc39d567a1dee68/internal_photos/bs/2024/U/5/zFCpZnRSaZdXZ1NdvFaQ/quiche-de-espinafre.jpg",
     prepTime: "45 min",
-    difficulty: "Médio",
-    categories: ["vegetarian"],
+    
+    categories: ["SAUDAVEL", "Saudáveis"],
   },
   {
     id: 5,
     title: "Bolo de chocolate",
     image: "https://i.ytimg.com/vi/QFMxJWh3mqE/maxresdefault.jpg",
     prepTime: "40 min",
-    difficulty: "Médio",
-    categories: ["easy"],
+    
+    categories: ["BOLOS", "Bolos"],
   },
   {
     id: 6,
@@ -69,41 +69,44 @@ const suggestions = [
     image:
       "https://nazareuniluz.org.br/wp-content/uploads/2023/08/institucional-blog-receitas-curry-de-grao-de-bico.jpg",
     prepTime: "35 min",
-    difficulty: "Médio",
-    categories: ["vegetarian"],
+   
+    categories: ["SAUDAVEL", "Saudáveis"],
   },
   {
     id: 7,
     title: "Torta de limão",
     image: "https://i.ytimg.com/vi/cc8QuY7seFQ/maxresdefault.jpg",
     prepTime: "15 min",
-    difficulty: "Fácil",
-    categories: ["easy", "quick"],
+   
+    categories: ["DOCES_E_SOBREMESAS", "Sobremesas"],
   },
   {
     id: 8,
     title: "Risoto de cogumelos",
     image: "https://assets.tmecosys.cn/image/upload/t_web767x639/img/recipe/vimdb/269097.jpg",
     prepTime: "25 min",
-    difficulty: "Fácil",
-    categories: ["vegetarian", "easy"],
+    
+    categories: ["SALGADOS", "Salgados"],
   },
   {
     id: 9,
     title: "Cookies de chocolate",
     image: "https://i.ytimg.com/vi/VJ1yk-YdUto/maxresdefault.jpg",
     prepTime: "15 min",
-    difficulty: "Fácil",
-    categories: ["easy", "quick"],
+    categories: ["DOCES_E_SOBREMESAS", "Sobremesas"],
   },
 ]
 
 // Categorias para filtros rápidos
 const categories = [
   { id: "all", name: "Todos" },
-  { id: "quick", name: "Rápido" },
-  { id: "easy", name: "Fácil" },
-  { id: "vegetarian", name: "Vegetariano" },
+  { id: "BEBIDAS", name: "Bebidas" },
+  { id: "BOLOS", name: "Bolos" },
+  { id: "SAUDAVEL", name: "Saudáveis" },
+  { id: "MASSAS", name: "Massas" },
+  { id: "SALGADOS", name: "Salgados" },
+  { id: "SOPAS", name: "Sopas" },
+  { id: "DOCES_E_SOBREMESAS", name: "Sobremesas" },
 ]
 
 // Componente de Card de Receita
