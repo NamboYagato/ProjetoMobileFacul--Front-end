@@ -12,7 +12,7 @@ export default function AboutScreen() {
 
   // Function to navigate back to config page
   const handleGoBack = () => {
-    router.push("/config/config")
+    router.push("/config/configHome")
   }
 
   const renderFeatureItem = (icon: React.ReactNode, title: string, description: string) => (

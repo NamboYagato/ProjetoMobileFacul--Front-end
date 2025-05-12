@@ -129,7 +129,7 @@ export default function HelpScreen() {
 
   // Function to navigate back to config page
   const handleGoBack = () => {
-    router.push("/config/config")
+    router.push("/config/configHome")
   }
 
   return (

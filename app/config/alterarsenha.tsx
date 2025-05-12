@@ -113,7 +113,7 @@ export default function AlterarSenha() {
 
   const handleGoBack = () => {
     // Navigate back to the config page using expo-router
-    router.push("/config/config")
+    router.push("/config/configHome")
   }
 
   return (
