@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react"
 import {
   View,
   TextInput,
@@ -19,85 +19,7 @@ import { StatusBar } from "expo-status-bar"
 import { Feather } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 
-// Sugestões de receitas com categorias adicionadas
-const suggestions = [
-  {
-    id: 1,
-    title: "Frango Agridoce",
-    image: "https://villalvafrutas.com.br/wp-content/uploads/2020/08/Frango-agridoce.jpg",
-    prepTime: "30 min",
-   
-    categories: ["SALGADOS", "Salgados"], // Adicionando categorias para cada receita
-  },
-  {
-    id: 2,
-    title: "Salada gregra",
-    image:
-      "https://www.estadao.com.br/resizer/xgbdreke8bix84U4ILBWMO_KuX0=/arc-anglerfish-arc2-prod-estadao/public/3K45SRWMQBAMHEOCORS3HY2W5I.jpg",
-    prepTime: "25 min",
-    
-    categories: ["SAUDAVEL", "Saudáveis"],
-  },
-  {
-    id: 3,
-    title: "Panquecas americanas",
-    image: "https://img-global.cpcdn.com/recipes/c667062f7f96d825/1200x630cq70/photo.jpg",
-    prepTime: "20 min",
-   
-    categories: ["DOCES_E_SOBREMESAS", "Sobremesas"],
-  },
-  {
-    id: 4,
-    title: "Quiche de Espinafre com queijo",
-    image:
-      "https://s2-receitas.glbimg.com/hQRLe4WjJRwT2W38WkkiTfB-Xq0=/0x0:1200x675/984x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_1f540e0b94d8437dbbc39d567a1dee68/internal_photos/bs/2024/U/5/zFCpZnRSaZdXZ1NdvFaQ/quiche-de-espinafre.jpg",
-    prepTime: "45 min",
-    
-    categories: ["SAUDAVEL", "Saudáveis"],
-  },
-  {
-    id: 5,
-    title: "Bolo de chocolate",
-    image: "https://i.ytimg.com/vi/QFMxJWh3mqE/maxresdefault.jpg",
-    prepTime: "40 min",
-    
-    categories: ["BOLOS", "Bolos"],
-  },
-  {
-    id: 6,
-    title: "Curry de Grão de Bico",
-    image:
-      "https://nazareuniluz.org.br/wp-content/uploads/2023/08/institucional-blog-receitas-curry-de-grao-de-bico.jpg",
-    prepTime: "35 min",
-   
-    categories: ["SAUDAVEL", "Saudáveis"],
-  },
-  {
-    id: 7,
-    title: "Torta de limão",
-    image: "https://i.ytimg.com/vi/cc8QuY7seFQ/maxresdefault.jpg",
-    prepTime: "15 min",
-   
-    categories: ["DOCES_E_SOBREMESAS", "Sobremesas"],
-  },
-  {
-    id: 8,
-    title: "Risoto de cogumelos",
-    image: "https://assets.tmecosys.cn/image/upload/t_web767x639/img/recipe/vimdb/269097.jpg",
-    prepTime: "25 min",
-    
-    categories: ["SALGADOS", "Salgados"],
-  },
-  {
-    id: 9,
-    title: "Cookies de chocolate",
-    image: "https://i.ytimg.com/vi/VJ1yk-YdUto/maxresdefault.jpg",
-    prepTime: "15 min",
-    categories: ["DOCES_E_SOBREMESAS", "Sobremesas"],
-  },
-]
-
-// Categorias para filtros rápidos
+// Categorias para filtros rápidos (mantidas no frontend para consistência e mapeamento)
 const categories = [
   { id: "all", name: "Todos" },
   { id: "BEBIDAS", name: "Bebidas" },
@@ -107,29 +29,32 @@ const categories = [
   { id: "SALGADOS", name: "Salgados" },
   { id: "SOPAS", name: "Sopas" },
   { id: "DOCES_E_SOBREMESAS", name: "Sobremesas" },
+  // Adicione outras categorias conforme seu enum TipoReceita no backend
 ]
 
 // Componente de Card de Receita
-const RecipeCard = ({ item, onPress }: any) => {
+// Ele renderiza os dados que recebe do backend.
+// A propriedade 'difficulty' não vem do backend e será ignorada se não estiver presente.
+const RecipeCard = ({ item, onPress }:any) => {
   const scaleAnim = useRef(new Animated.Value(1)).current
 
-  const handlePressIn = () => {
+  const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
       toValue: 0.97,
       friction: 7,
       tension: 40,
       useNativeDriver: true,
     }).start()
-  }
+  }, [scaleAnim])
 
-  const handlePressOut = () => {
+  const handlePressOut = useCallback(() => {
     Animated.spring(scaleAnim, {
       toValue: 1,
       friction: 7,
       tension: 40,
       useNativeDriver: true,
     }).start()
-  }
+  }, [scaleAnim])
 
   return (
     <TouchableOpacity
@@ -140,15 +65,30 @@ const RecipeCard = ({ item, onPress }: any) => {
     >
       <Animated.View style={[styles.recipeCard, { transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.imageContainer}>
-          <Image source={{ uri: item.image }} style={styles.recipeImage} />
-          <View style={styles.difficultyBadge}>
-            <Text style={styles.difficultyText}>{item.difficulty}</Text>
-          </View>
+          <Image
+            source={{ uri: item.image || `https://placehold.co/400x250/cccccc/333333?text=${encodeURIComponent(item.title)}` }}
+            style={styles.recipeImage}
+            onError={(e) => console.log('Erro ao carregar imagem:', e.nativeEvent.error)}
+          />
+          {/* O backend não está retornando 'difficulty'. Este bloco só renderizará se 'item.difficulty' for true/existir. */}
+          {item.difficulty && (
+            <View style={styles.difficultyBadge}>
+              <Text style={styles.difficultyText}>{item.difficulty}</Text>
+            </View>
+          )}
         </View>
+
         <View style={styles.recipeContent}>
           <Text style={styles.recipeTitle} numberOfLines={1}>
             {item.title}
           </Text>
+          {/* Se você quiser exibir a categoria aqui, você precisaria mapear 'item.categories[0]'
+              para o nome de exibição usando a lista 'categories' do frontend. */}
+          {/* Por exemplo:
+          <Text style={styles.recipeCategoryText}>
+            {item.categories && categories.find(cat => cat.id === item.categories[0])?.name}
+          </Text>
+          */}
           <View style={styles.recipeMetaContainer}>
             <View style={styles.recipeMeta}>
               <Feather name="clock" size={14} color="#FF6B35" />
@@ -164,11 +104,11 @@ const RecipeCard = ({ item, onPress }: any) => {
   )
 }
 
-// Componente de Filtro de Categoria
+// Componente de Filtro de Categoria (sem alterações significativas)
 const CategoryFilter = ({ categories, activeCategory, onSelectCategory }: any) => (
   <View style={{ marginBottom: 8 }}>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
-      {categories.map((cat: any) => (
+      {categories.map((cat: { id: Key | null | undefined; name: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined }):any => (
         <TouchableOpacity
           key={cat.id}
           style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
@@ -185,48 +125,80 @@ const CategoryFilter = ({ categories, activeCategory, onSelectCategory }: any) =
     </ScrollView>
   </View>
 )
+
 export default function SearchScreen() {
-  const [query, setQuery] = useState("")
-  const [isSearchFocused, setIsSearchFocused] = useState(false)
-  const [activeCategory, setActiveCategory] = useState("all")
-  const [isLoading, setIsLoading] = useState(false)
+  const [query, setQuery] = useState("") // Termo de busca digitado pelo usuário
+  const [activeCategory, setActiveCategory] = useState("all") // Categoria de filtro ativa
+  const [recipes, setRecipes] = useState([]) // Receitas retornadas do backend
+  const [isLoading, setIsLoading] = useState(false) // Estado de carregamento
+  const [apiError, setApiError] = useState(String) // Estado para erros da API
+
   const router = useRouter()
   const inputRef = useRef<TextInput>(null)
-  const searchBarAnim = useRef(new Animated.Value(0)).current
 
-  // Simular carregamento ao mudar filtros
-  useEffect(() => {
-    if (activeCategory !== "all" || query.length > 0) {
-      setIsLoading(true)
-      const timer = setTimeout(() => setIsLoading(false), 300)
-      return () => clearTimeout(timer)
+
+  // Função para buscar receitas do backend
+  const fetchRecipes = useCallback(async () => {
+    setIsLoading(true)
+    setApiError(String) // Limpa erros anteriores
+
+    try {
+      // *** URL CORRETO DO SEU BACKEND ***
+      // Se seu backend está rodando localmente na porta 3001 e o prefixo do controller é 'receitas'
+      const backendBaseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
+      const backendEndpoint = `${backendBaseUrl}/receitas`; // Sem '/search' porque o endpoint principal já é a busca
+
+      const params = new URLSearchParams();
+      if (query) {
+        params.append('query', query);
+      }
+      if (activeCategory !== 'all') {
+        params.append('category', activeCategory);
+      }
+
+      const url = `${backendEndpoint}?${params.toString()}`;
+      console.log("Buscando em:", url); // Para depuração
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+        throw new Error(`Erro na API: ${response.status} - ${errorData.message || 'Falha ao buscar receitas'}`);
+      }
+
+      const data = await response.json();
+      setRecipes(data); // Atualiza o estado com as receitas do backend
+    } catch (error) {
+      console.error("Erro ao buscar receitas:", error);
+      setApiError("Não foi possível carregar as receitas. Verifique sua conexão ou tente novamente.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [activeCategory, query])
+  }, [query, activeCategory]);
 
-  const filtered = suggestions.filter((item) => {
-    // Filtrar por texto de busca
-    const matchesQuery = item.title.toLowerCase().includes(query.toLowerCase())
+  // Efeito para disparar a busca quando a query ou categoria mudam
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchRecipes();
+    }, 500); // 500ms de delay
 
-    // Filtrar por categoria
-    const matchesCategory = activeCategory === "all" || item.categories.includes(activeCategory)
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [fetchRecipes]);
 
-    // Retornar apenas itens que correspondem à busca E à categoria
-    return matchesQuery && matchesCategory
-  })
-
-  const handleCardPress = (id: any) => router.push(`/receita/${id}`)
+  const handleCardPress = (id: any) => {
+    router.push(`/receita/${id}`); // Navega para a página de detalhes da receita
+  };
 
   const clearSearch = () => {
-    setQuery("")
-    inputRef.current?.focus()
-  }
+    setQuery("");
+    inputRef.current?.focus();
+  };
 
-  const handleCategorySelect = (id: any) => {
-    setActiveCategory(id)
-    // Simular carregamento ao mudar categoria
-    setIsLoading(true)
-    setTimeout(() => setIsLoading(false), 300)
-  }
+  const handleCategorySelect = (id:any) => {
+    setActiveCategory(id);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -246,7 +218,6 @@ export default function SearchScreen() {
           placeholderTextColor="#9CA3AF"
           value={query}
           onChangeText={setQuery}
-          
           underlineColorAndroid="transparent"
         />
         {query.length > 0 && (
@@ -258,16 +229,25 @@ export default function SearchScreen() {
 
       <CategoryFilter categories={categories} activeCategory={activeCategory} onSelectCategory={handleCategorySelect} />
 
-      {isLoading ? (
+      {apiError ? (
+        <View style={styles.errorContainer}>
+          <Feather name="alert-triangle" size={40} color="#EF4444" />
+          <Text style={styles.errorText}>{apiError}</Text>
+          <TouchableOpacity onPress={fetchRecipes} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+          </TouchableOpacity>
+        </View>
+      ) : isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FF6B35" />
           <Text style={styles.loadingText}>Buscando receitas...</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.recipesContainer} showsVerticalScrollIndicator={false}>
-          {filtered.length > 0 ? (
+          {recipes.length > 0 ? (
+
             <View style={styles.recipesGrid}>
-              {filtered.map((item) => (
+              {recipes.map((item:any) => (
                 <RecipeCard key={item.id} item={item} onPress={handleCardPress} />
               ))}
             </View>
@@ -275,7 +255,11 @@ export default function SearchScreen() {
             <View style={styles.emptyStateContainer}>
               <Feather name="search" size={50} color="#D1D5DB" />
               <Text style={styles.emptyStateTitle}>Nenhuma receita encontrada</Text>
-              <Text style={styles.emptyStateText}>Tente buscar com outras palavras ou explorar as categorias</Text>
+              <Text style={styles.emptyStateText}>
+                {query || activeCategory !== 'all'
+                  ? `Não encontramos resultados para "${query}" na categoria "${categories.find(c => c.id === activeCategory)?.name || activeCategory}".`
+                  : 'Tente buscar com outras palavras ou explorar as categorias.'}
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -323,7 +307,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 0  ,
+        elevation: 0,
       },
     }),
   },
@@ -381,6 +365,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6B7280",
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#EF4444",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: "#FF6B35",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
   recipesContainer: {
     paddingHorizontal: 16,
     paddingBottom: 24,
@@ -426,9 +433,9 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
   difficultyText: {
     color: "#FFFFFF",
@@ -443,7 +450,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
     marginBottom: 8,
-    height: 20,
+    height: 20, // Garante que o título não empurre o layout se for muito curto
   },
   recipeMetaContainer: {
     flexDirection: "row",

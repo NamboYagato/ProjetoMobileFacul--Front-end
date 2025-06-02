@@ -25,6 +25,18 @@ export default function Layout() {
         name="receita/[id]"
         options={{ title: "Detalhe da Receita", headerShown: false }}
       />
+      <Stack.Screen
+       name="search"
+       options={{ title: "", headerShown: false }}
+      />
+      <Stack.Screen
+      name="config/config"
+      options={{ title: "", headerShown: false }}
+      />
+      <Stack.Screen
+      name="config/alterarsenha"
+      options={{ title: "", headerShown: false }}
+      />
     </Stack>
     </AuthProvider>
   );
