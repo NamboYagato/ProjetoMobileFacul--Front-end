@@ -1,6 +1,18 @@
-"use client"
+// app/search.tsx
+"use client";
 
-import { useState, useRef, useEffect, useCallback, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react"
+import React, { // Adicionado React para JSXElementConstructor, etc.
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useContext, // Adicionado useContext
+  Key,
+  ReactElement,
+  ReactNode,
+  ReactPortal,
+  JSXElementConstructor
+} from "react";
 import {
   View,
   TextInput,
@@ -14,29 +26,62 @@ import {
   Dimensions,
   Platform,
   ActivityIndicator,
-} from "react-native"
-import { StatusBar } from "expo-status-bar"
-import { Feather } from "@expo/vector-icons"
-import { useRouter } from "expo-router"
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { AuthContext } from "./context/AuthContext"; // Ajuste o caminho se necessário
+import api from "./../services/api"; // Importa a instância do axios configurada
 
-// Categorias para filtros rápidos (mantidas no frontend para consistência e mapeamento)
+
+// Interface para a Receita com base no schema.prisma e na resposta do backend
+// (receita.service.ts -> findAll e findAllPublicRecipe)
+interface Receita {
+  id: number;
+  titulo: string;
+  descricao?: string; // O findAllPublicRecipe retorna, o findAll também.
+  tipo: string; // Corresponde ao enum TipoReceita
+  publicada?: boolean;
+  criadoEm: string;
+  atualizadaEm?: string;
+  autor: {
+    id: number;
+    nome: string;
+    // email?: string; // Opcional, dependendo do select no backend
+  };
+  imagens: Array<{
+    id?: number; // Opcional, pode não vir sempre
+    url: string;
+    // tipo?: string; // Opcional
+  }>;
+  // Campos que vêm da rota autenticada (/receitas)
+  likeCount?: number;
+  favoriteCount?: number;
+  liked?: boolean;
+  favorited?: boolean;
+  // Campos que não existem no backend:
+  // prepTime?: string; (Será removido ou adaptado no RecipeCard)
+  // difficulty?: string; (Será removido ou adaptado no RecipeCard)
+}
+
+
+// Categorias para filtros rápidos
 const categories = [
   { id: "all", name: "Todos" },
   { id: "BEBIDAS", name: "Bebidas" },
   { id: "BOLOS", name: "Bolos" },
-  { id: "SAUDAVEL", name: "Saudáveis" },
+  { id: "DOCES_E_SOBREMESAS", name: "Sobremesas" },
+  { id: "FITNES", name: "Fitness" }, // Ajustei o nome para melhor leitura se desejar
+  { id: "LANCHES", name: "Lanches" },
   { id: "MASSAS", name: "Massas" },
   { id: "SALGADOS", name: "Salgados" },
+  { id: "SAUDAVEL", name: "Saudáveis" },
   { id: "SOPAS", name: "Sopas" },
-  { id: "DOCES_E_SOBREMESAS", name: "Sobremesas" },
-  // Adicione outras categorias conforme seu enum TipoReceita no backend
-]
+];
 
-// Componente de Card de Receita
-// Ele renderiza os dados que recebe do backend.
-// A propriedade 'difficulty' não vem do backend e será ignorada se não estiver presente.
-const RecipeCard = ({ item, onPress }:any) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current
+// Componente de Card de Receita Atualizado
+const RecipeCard = ({ item, onPress }: { item: Receita; onPress: (id: number) => void }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -44,8 +89,8 @@ const RecipeCard = ({ item, onPress }:any) => {
       friction: 7,
       tension: 40,
       useNativeDriver: true,
-    }).start()
-  }, [scaleAnim])
+    }).start();
+  }, [scaleAnim]);
 
   const handlePressOut = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -53,9 +98,14 @@ const RecipeCard = ({ item, onPress }:any) => {
       friction: 7,
       tension: 40,
       useNativeDriver: true,
-    }).start()
-  }, [scaleAnim])
+    }).start();
+  }, [scaleAnim]);
 
+  const imageUrl = item.imagens && item.imagens.length > 0
+    ? item.imagens[0].url
+    : `https://placehold.co/400x250/cccccc/333333?text=${encodeURIComponent(item.titulo)}`;
+
+  
   return (
     <TouchableOpacity
       activeOpacity={0.8}
@@ -66,49 +116,65 @@ const RecipeCard = ({ item, onPress }:any) => {
       <Animated.View style={[styles.recipeCard, { transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: item.image || `https://placehold.co/400x250/cccccc/333333?text=${encodeURIComponent(item.title)}` }}
+            source={{ uri: imageUrl }}
             style={styles.recipeImage}
             onError={(e) => console.log('Erro ao carregar imagem:', e.nativeEvent.error)}
           />
-          {/* O backend não está retornando 'difficulty'. Este bloco só renderizará se 'item.difficulty' for true/existir. */}
+          {/* Se você decidir implementar 'difficulty' no backend:
           {item.difficulty && (
             <View style={styles.difficultyBadge}>
               <Text style={styles.difficultyText}>{item.difficulty}</Text>
             </View>
           )}
+          */}
         </View>
 
         <View style={styles.recipeContent}>
           <Text style={styles.recipeTitle} numberOfLines={1}>
-            {item.title}
+            {item.titulo}
           </Text>
-          {/* Se você quiser exibir a categoria aqui, você precisaria mapear 'item.categories[0]'
-              para o nome de exibição usando a lista 'categories' do frontend. */}
-          {/* Por exemplo:
-          <Text style={styles.recipeCategoryText}>
-            {item.categories && categories.find(cat => cat.id === item.categories[0])?.name}
+          {/* Exibindo a categoria (tipo) da receita */}
+          <Text style={styles.recipeCategoryText} numberOfLines={1}>
+            {categories.find(cat => cat.id === item.tipo)?.name || item.tipo}
           </Text>
-          */}
           <View style={styles.recipeMetaContainer}>
             <View style={styles.recipeMeta}>
-              <Feather name="clock" size={14} color="#FF6B35" />
-              <Text style={styles.recipeMetaText}>{item.prepTime}</Text>
+              <Feather name="user" size={14} color="#FF6B35" />
+              <Text style={styles.recipeMetaText} numberOfLines={1}>{item.autor.nome}</Text>
             </View>
-            <TouchableOpacity style={styles.favoriteButton}>
-              <Feather name="heart" size={16} color="#9CA3AF" />
+            {/* A funcionalidade de favoritar/curtir precisaria de mais lógica */}
+            <TouchableOpacity style={styles.favoriteButton} onPress={() => console.log('Favoritar clicado:', item.id)}>
+              <Feather name={item.favorited ? "heart" : "heart"} size={16} color={item.favorited ? "#FF6B35" : "#9CA3AF"} />
+              {item.favoriteCount !== undefined && <Text style={styles.countText}>{item.favoriteCount}</Text>}
             </TouchableOpacity>
           </View>
+           {/* Exibindo curtidas se disponíveis (rota autenticada) */}
+           {item.likeCount !== undefined && (
+            <View style={[styles.recipeMeta, { marginTop: 4 }]}>
+              <Feather name="thumbs-up" size={14} color="#FF6B35" />
+              <Text style={styles.recipeMetaText}>{item.likeCount} curtidas</Text>
+              {item.liked && <Text style={styles.likedText}> (Você curtiu)</Text>}
+            </View>
+          )}
         </View>
       </Animated.View>
     </TouchableOpacity>
-  )
-}
+  );
+};
 
-// Componente de Filtro de Categoria (sem alterações significativas)
-const CategoryFilter = ({ categories, activeCategory, onSelectCategory }: any) => (
+// Componente de Filtro de Categoria (sem alterações na lógica interna)
+const CategoryFilter = ({
+  categories,
+  activeCategory,
+  onSelectCategory,
+}: {
+  categories: Array<{ id: string; name: string }>;
+  activeCategory: string;
+  onSelectCategory: (id: string) => void;
+}) => (
   <View style={{ marginBottom: 8 }}>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
-      {categories.map((cat: { id: Key | null | undefined; name: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined }):any => (
+      {categories.map((cat) => (
         <TouchableOpacity
           key={cat.id}
           style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
@@ -124,71 +190,80 @@ const CategoryFilter = ({ categories, activeCategory, onSelectCategory }: any) =
       ))}
     </ScrollView>
   </View>
-)
+);
 
 export default function SearchScreen() {
-  const [query, setQuery] = useState("") // Termo de busca digitado pelo usuário
-  const [activeCategory, setActiveCategory] = useState("all") // Categoria de filtro ativa
-  const [recipes, setRecipes] = useState([]) // Receitas retornadas do backend
-  const [isLoading, setIsLoading] = useState(false) // Estado de carregamento
-  const [apiError, setApiError] = useState(String) // Estado para erros da API
+  const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [recipes, setRecipes] = useState<Receita[]>([]); // Tipado com a nova interface
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null); // Pode ser null ou string
 
-  const router = useRouter()
-  const inputRef = useRef<TextInput>(null)
+  const router = useRouter();
+  const inputRef = useRef<TextInput>(null);
+  const authContext = useContext(AuthContext); // Acessa o contexto de autenticação
 
-
-  // Função para buscar receitas do backend
   const fetchRecipes = useCallback(async () => {
-    setIsLoading(true)
-    setApiError(String) // Limpa erros anteriores
+    setIsLoading(true);
+    setApiError(null); // Limpa erros anteriores
+
+    const currentUser = authContext?.user;
+    const token = currentUser?.token;
 
     try {
-      // *** URL CORRETO DO SEU BACKEND ***
-      // Se seu backend está rodando localmente na porta 3001 e o prefixo do controller é 'receitas'
-      const backendBaseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
-      const backendEndpoint = `${backendBaseUrl}/receitas`; // Sem '/search' porque o endpoint principal já é a busca
-
-      const params = new URLSearchParams();
+      const params: { search?: string; type?: string } = {};
       if (query) {
-        params.append('query', query);
+        params.search = query;
       }
-      if (activeCategory !== 'all') {
-        params.append('category', activeCategory);
-      }
-
-      const url = `${backendEndpoint}?${params.toString()}`;
-      console.log("Buscando em:", url); // Para depuração
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
-        throw new Error(`Erro na API: ${response.status} - ${errorData.message || 'Falha ao buscar receitas'}`);
+      if (activeCategory !== "all") {
+        params.type = activeCategory;
       }
 
-      const data = await response.json();
-      setRecipes(data); // Atualiza o estado com as receitas do backend
-    } catch (error) {
+      let response;
+      const config = {
+        params,
+        headers: {},
+      };
+
+      if (token) {
+        config.headers = { Authorization: `Bearer ${token}` };
+        // Chama a rota autenticada que retorna mais detalhes (liked, favorited, counts)
+        response = await api.get<Receita[]>("/receitas", config);
+        console.log("Buscando em /receitas (autenticado)");
+      } else {
+        // Chama a rota pública
+        response = await api.get<Receita[]>("/receitas/publicas", config);
+        console.log("Buscando em /receitas/publicas");
+      }
+      
+      setRecipes(response.data);
+    } catch (error: any) {
       console.error("Erro ao buscar receitas:", error);
-      setApiError("Não foi possível carregar as receitas. Verifique sua conexão ou tente novamente.");
+      if (error.response) {
+        setApiError(`Erro ${error.response.status}: ${error.response.data.message || 'Falha ao buscar receitas.'}`);
+      } else if (error.request) {
+        setApiError("Não foi possível conectar ao servidor. Verifique sua conexão.");
+      } else {
+        setApiError(error.message || "Ocorreu um erro desconhecido.");
+      }
+      setRecipes([]); // Limpa receitas em caso de erro
     } finally {
       setIsLoading(false);
     }
-  }, [query, activeCategory]);
+  }, [query, activeCategory, authContext]);
 
-  // Efeito para disparar a busca quando a query ou categoria mudam
   useEffect(() => {
     const handler = setTimeout(() => {
       fetchRecipes();
-    }, 500); // 500ms de delay
+    }, 500);
 
     return () => {
       clearTimeout(handler);
     };
   }, [fetchRecipes]);
 
-  const handleCardPress = (id: any) => {
-    router.push(`/receita/${id}`); // Navega para a página de detalhes da receita
+  const handleCardPress = (id: number) => {
+    router.push(`/receita/${id}`);
   };
 
   const clearSearch = () => {
@@ -196,7 +271,7 @@ export default function SearchScreen() {
     inputRef.current?.focus();
   };
 
-  const handleCategorySelect = (id:any) => {
+  const handleCategorySelect = (id: string) => {
     setActiveCategory(id);
   };
 
@@ -219,6 +294,8 @@ export default function SearchScreen() {
           value={query}
           onChangeText={setQuery}
           underlineColorAndroid="transparent"
+          returnKeyType="search"
+          onSubmitEditing={fetchRecipes} // Opcional: buscar ao pressionar "Enter" no teclado
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
@@ -229,7 +306,7 @@ export default function SearchScreen() {
 
       <CategoryFilter categories={categories} activeCategory={activeCategory} onSelectCategory={handleCategorySelect} />
 
-      {apiError ? (
+      {apiError && !isLoading ? ( // Mostrar erro apenas se não estiver carregando
         <View style={styles.errorContainer}>
           <Feather name="alert-triangle" size={40} color="#EF4444" />
           <Text style={styles.errorText}>{apiError}</Text>
@@ -245,9 +322,8 @@ export default function SearchScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.recipesContainer} showsVerticalScrollIndicator={false}>
           {recipes.length > 0 ? (
-
             <View style={styles.recipesGrid}>
-              {recipes.map((item:any) => (
+              {recipes.map((item) => (
                 <RecipeCard key={item.id} item={item} onPress={handleCardPress} />
               ))}
             </View>
@@ -265,17 +341,18 @@ export default function SearchScreen() {
         </ScrollView>
       )}
     </SafeAreaView>
-  )
+  );
 }
 
-const { width } = Dimensions.get("window")
-const cardWidth = (width - 48) / 2 // 16px padding on each side, 16px gap between cards
+const { width } = Dimensions.get("window");
+const cardWidth = (width - 48) / 2; // 16px padding on each side, 16px gap between cards
 
+// Estilos (mantive os seus, adicionei recipeCategoryText e countText se necessário)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === "android" ? 8 : 0,
+    paddingTop: Platform.OS === "android" ? 8 : 0, // Ajustado para paddingTop
   },
   header: {
     paddingHorizontal: 16,
@@ -296,18 +373,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginVertical: 16,
+    marginVertical: 16, // Mantido
     paddingHorizontal: 16,
     height: 52,
     borderRadius: 12,
+    backgroundColor: "#F3F4F6", // Adicionado um fundo suave para contraste
+    // borderColor e borderWidth são aplicados externamente no JSX
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 1 }, // Sombra mais sutil
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
       },
       android: {
-        elevation: 0,
+        elevation: 0, // A borda já dá destaque
       },
     }),
   },
@@ -328,20 +408,20 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
-    gap: 8,
-    flexDirection: "row",
-    alignItems: "center",
+    paddingBottom: 24, // Aumentado um pouco para dar espaço antes da lista
+    // gap: 8, // gap não é suportado em ScrollView contentContainerStyle no RN, use marginRight no item
+    flexDirection: "row", // já estava
+    alignItems: "center", // já estava
   },
   categoryChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: "#F3F4F6",
-    marginRight: 8,
+    marginRight: 8, // Adicionado para simular o 'gap'
     minWidth: 80,
     alignItems: "center",
-    zIndex: 1,
+    // zIndex: 1, // Geralmente não necessário aqui
   },
   categoryChipActive: {
     backgroundColor: "#FF6B35",
@@ -391,19 +471,20 @@ const styles = StyleSheet.create({
   recipesContainer: {
     paddingHorizontal: 16,
     paddingBottom: 24,
-    zIndex: 0,
+    // zIndex: 0, // Geralmente não necessário aqui
   },
   recipesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 16,
+    // gap: 16, // gap não é suportado em View no RN, use margin no item ou ajuste justifyContent
   },
   recipeCard: {
     width: cardWidth,
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
     overflow: "hidden",
+    marginBottom: 16, // Adicionado para simular 'gap' vertical entre linhas
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -428,7 +509,7 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
-  difficultyBadge: {
+  difficultyBadge: { // Mantido para caso você adicione no futuro
     position: "absolute",
     top: 8,
     right: 8,
@@ -437,7 +518,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
-  difficultyText: {
+  difficultyText: { // Mantido
     color: "#FFFFFF",
     fontSize: 10,
     fontWeight: "600",
@@ -449,30 +530,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 8,
-    height: 20, // Garante que o título não empurre o layout se for muito curto
+    marginBottom: 4, // Reduzido margin para acomodar categoria
+    // height: 20, // Removido height fixo para títulos de tamanhos variados
+  },
+  recipeCategoryText: { // Adicionado estilo para a categoria
+    fontSize: 11,
+    color: "#6B7280",
+    marginBottom: 6,
+    textTransform: 'capitalize',
   },
   recipeMetaContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 4, // Adicionado um pouco de espaço
   },
   recipeMeta: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 1, // Permite que o nome do autor encolha se necessário
   },
   recipeMetaText: {
     fontSize: 12,
     color: "#6B7280",
     marginLeft: 6,
+    marginRight: 6, // Espaço antes do botão de favorito
   },
   favoriteButton: {
     padding: 4,
+    flexDirection: 'row', // Para alinhar ícone e contador
+    alignItems: 'center',
+  },
+  countText: { // Para os contadores de like/favorite
+    fontSize: 12,
+    color: "#6B7280",
+    marginLeft: 4,
+  },
+  likedText: {
+    fontSize: 11,
+    color: "#FF6B35",
+    fontStyle: 'italic',
+    marginLeft: 4,
   },
   emptyStateContainer: {
+    flex: 1, // Para ocupar o espaço disponível se o ScrollView estiver vazio
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 80,
+    minHeight: Dimensions.get('window').height * 0.5, // Garante uma altura mínima
   },
   emptyStateTitle: {
     fontSize: 18,
@@ -487,4 +592,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 32,
   },
-})
+});

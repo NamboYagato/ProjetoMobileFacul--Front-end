@@ -10,7 +10,7 @@ export interface User {
   token: string;
 }
 
-interface AuthContextData {
+export interface AuthContextData {
   user: User | null;
   login: (email: string, senha: string) => Promise<boolean>;
   register: (nome: string, email: string, senha: string) => Promise<boolean>;
