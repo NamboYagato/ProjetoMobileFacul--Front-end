@@ -1,4 +1,3 @@
-// LoginScreen.tsx
 import React, { useState, useContext, useEffect } from "react";
 import {
   View,
@@ -7,30 +6,26 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { AuthContext } from "./context/AuthContext"; // ajuste o caminho conforme sua estrutura
+import { useRouter, useRootNavigationState } from "expo-router";
+import { AuthContext } from "./context/AuthContext";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { user, login } = useContext(AuthContext);
+  const { login, user, loading: authLoading } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState('');
-
-  // Se usuário já estiver logado, redireciona para a Home
-  useEffect(() => {
-    if (user) {
-      router.push("/home");
-    }
-  }, [user]);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleLogin() {
     const success = await login(email, password);
     if (success) {
-      router.push('/home'); // Redireciona para a home
+      router.push("/home");
+      console.log("deu certo login");
     } else {
-      setErrorMessage('Credenciais inválidas. Tente novamente.');
+      setErrorMessage("Credenciais inválidas. Tente novamente.");
+      console.log("deu errado login");
     }
   }
 
@@ -66,7 +61,9 @@ export default function LoginScreen() {
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
           <Text style={styles.loginButtonText}>Entrar</Text>
         </TouchableOpacity>
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {errorMessage ? (
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        ) : null}
       </View>
 
       <View style={styles.footerContainer}>
@@ -156,8 +153,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   errorText: {
-    color: 'red',
+    color: "red",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

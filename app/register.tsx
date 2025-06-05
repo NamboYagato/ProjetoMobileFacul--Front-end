@@ -1,4 +1,3 @@
-// RegisterScreen.tsx
 import React, { useState, useContext, useEffect } from "react";
 import {
   View,
@@ -19,13 +18,6 @@ export default function RegisterScreen() {
   const [senha, setSenha] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Se o usuário já estiver logado, redireciona para a Home
-  useEffect(() => {
-    if (user) {
-      router.push("/");
-    }
-  }, [user]);
-
   async function handleRegister() {
     // Validação simples para conferir se as senhas coincidem
     if (!nome || !email || !senha) {
@@ -35,7 +27,8 @@ export default function RegisterScreen() {
 
     // Tente efetuar o registro utilizando a função disponível no contexto
     const success = await register(nome, email, senha);
-    if (success) {
+    console.log(success);
+    if (success as any) {
       router.push("/"); // Redireciona para a Home após o cadastro com sucesso
     } else {
       setErrorMessage("Erro ao registrar. Tente novamente.");
