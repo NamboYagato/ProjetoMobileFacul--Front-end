@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { AuthContext } from "./context/AuthContext";
+import { AuthContext } from "@/app/context/AuthContext";
 
 export default function RegisterScreen() {
   const router = useRouter();

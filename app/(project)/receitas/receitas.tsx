@@ -14,6 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import axios from "axios";
 import { useFonts } from "expo-font";
+import Footer from "@/components/Footer";
 
 type ContentFromAPI = {
   id: number;
@@ -184,6 +185,8 @@ export default function ReceitasScreen() {
           })
         )}
       </Animated.ScrollView>
+
+      <Footer/>
     </View>
   );
 }

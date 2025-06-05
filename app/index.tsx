@@ -21,14 +21,14 @@ export default function LoginScreen() {
   // Se usuário já estiver logado, redireciona para a Home
   useEffect(() => {
     if (user) {
-      router.push("/home");
+      router.push("/home/home");
     }
   }, [user]);
 
   async function handleLogin() {
     const success = await login(email, password);
     if (success) {
-      router.push('/home'); // Redireciona para a home
+      router.push('/home/home'); // Redireciona para a home
     } else {
       setErrorMessage('Credenciais inválidas. Tente novamente.');
     }
@@ -71,7 +71,7 @@ export default function LoginScreen() {
 
       <View style={styles.footerContainer}>
         <Text style={styles.footerText}>Não tem uma conta?</Text>
-        <TouchableOpacity onPress={() => router.push("/register")}>
+        <TouchableOpacity onPress={() => router.push("/register/register")}>
           <Text style={styles.linkText}>Cadastre-se</Text>
         </TouchableOpacity>
       </View>

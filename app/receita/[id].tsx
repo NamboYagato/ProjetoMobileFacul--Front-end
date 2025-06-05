@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
+import Footer from "@/components/Footer";
 
 type Receita = {
   id: number;
@@ -414,6 +415,7 @@ export default function ReceitaScreen() {
           </View>
         </Animated.ScrollView>
       )}
+      <Footer/>
     </View>
   );
 }

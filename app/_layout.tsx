@@ -13,13 +13,17 @@ export default function Layout() {
       name="register"
       options={{ title: "", headerShown: false }}
       />
-      <Stack.Screen
-        name="home"
+      {/* <Stack.Screen
+        // name="home"
         options={{ title: "Home", headerShown: false }}
-      />
+      /> */}
       <Stack.Screen
         name="receitas"
         options={{ title: "", headerShown: false }}
+      />
+       <Stack.Screen
+        name="(project)"
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="receita/[id]"
