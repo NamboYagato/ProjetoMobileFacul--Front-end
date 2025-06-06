@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ProjetoMobile",
-    "slug": "ProjetoMobile",
+    "name": "MenuUp",
+    "slug": "MenuUp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,22 +13,25 @@
     },
     "android": {
       "package": "com.dangjogus.menuup",
+      "config": {
+        "googleMobileAdsAppId": "SAMPLE_APP_ID"
+      },
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       }
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -37,6 +40,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "44803f26-7722-47e9-9d3d-b5327c5ef61d"
+      }
     }
   }
 }

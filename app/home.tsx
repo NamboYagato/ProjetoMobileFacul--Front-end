@@ -18,6 +18,7 @@ import {
 import { useRouter } from "expo-router";
 import { AuthContext } from "./context/AuthContext";
 import api from "@/services/api";
+import App from "@/components/AdMobBanner";
 
 type Receita = {
   id: number;
@@ -339,6 +340,7 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
         </View>
+        <App />
       </ScrollView>
     </View>
   );
