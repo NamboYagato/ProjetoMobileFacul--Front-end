@@ -12,8 +12,9 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.dangjogus.menuup",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/",
         "backgroundColor": "#ffffff"
       }
     },

@@ -1,201 +1,342 @@
-import React, { useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+"use client";
+
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   ScrollView,
-  Image,
   TouchableOpacity,
   Text,
   TextInput,
   StyleSheet,
-  ImageBackground,
   StatusBar,
   Dimensions,
   ActivityIndicator,
+  ImageBackground,
+  Animated,
+  Platform,
 } from "react-native";
-import { Link, useRouter } from "expo-router";
-import axios from "axios";
+import { useRouter } from "expo-router";
+import { AuthContext } from "./context/AuthContext";
+import api from "@/services/api";
 
-type ContentFromAPI = {
+type Receita = {
   id: number;
-  receita: string;
+  titulo: string;
   tipo: string;
-  ingredientes: string;
-  modo_preparo: string;
+  imagens: { dataBase64: string }[];
 };
+
+const categorias = [
+  { id: "BEBIDAS", label: "Bebidas", emoji: "🥤", cor: "#3b82f6" },
+  { id: "BOLOS", label: "Bolos", emoji: "🍰", cor: "#f59e0b" },
+  {
+    id: "DOCES_E_SOBREMESAS",
+    label: "Sobremesas",
+    emoji: "🧁",
+    cor: "#ec4899",
+  },
+  { id: "FITNES", label: "Fitness", emoji: "💪", cor: "#10b981" },
+  { id: "LANCHES", label: "Lanches", emoji: "🥪", cor: "#f97316" },
+  { id: "MASSAS", label: "Massas", emoji: "🍝", cor: "#8b5cf6" },
+  { id: "SALGADOS", label: "Salgados", emoji: "🥟", cor: "#06b6d4" },
+  { id: "SAUDAVEL", label: "Saudáveis", emoji: "🥗", cor: "#22c55e" },
+  { id: "SOPAS", label: "Sopas", emoji: "🍲", cor: "#ef4444" },
+];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [data, setData] = useState<ContentFromAPI[]>();
+  const { user, loading: authLoading, logout, token } = useContext(AuthContext);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [destaques, setDestaques] = useState<Receita[]>([]);
   const [loading, setLoading] = useState(true);
-  const [featuredRecipes, setFeaturedRecipes] = useState<ContentFromAPI[]>([]);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const fadeAnim = new Animated.Value(0);
+  const slideAnim = new Animated.Value(-50);
 
-  async function fetchContent() {
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: false,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  async function fetchDestaques() {
     setLoading(true);
     try {
-      const response: ContentFromAPI[] = await axios
-        .get("https://api-receitas-pi.vercel.app/receitas/todas")
-        .then((response) => {
-          return response.data;
-        });
-      return response;
-    } catch (error) {
-      console.error("Error fetching recipes:", error);
-      return [];
+      const res = await api.get<Receita[]>("receitas/publicas", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDestaques(res.data.slice(0, 8));
+    } catch (err) {
+      console.error("Erro ao buscar destaques:", err);
+      setDestaques([]);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    async function retrieve() {
-      const apiResponse = await fetchContent();
-      setData(apiResponse);
+    if (!authLoading) fetchDestaques();
+  }, [authLoading]);
 
-      if (apiResponse && apiResponse.length > 0) {
-        const shuffled = [...apiResponse].sort(() => 0.5 - Math.random());
-        setFeaturedRecipes(shuffled.slice(0, 3));
-      }
-    }
-    retrieve();
-  }, []);
+  const handleSearchSubmit = () =>
+    router.replace({ pathname: "/search", params: { q: searchQuery.trim() } });
 
-  const imageMap: { [key: number]: string } = {
-    1: "https://villalvafrutas.com.br/wp-content/uploads/2020/08/Frango-agridoce.jpg",
-    2: "https://www.estadao.com.br/resizer/xgbdreke8bix84U4ILBWMO_KuX0=/arc-anglerfish-arc2-prod-estadao/public/3K45SRWMQBAMHEOCORS3HY2W5I.jpg",
-    3: "https://img-global.cpcdn.com/recipes/c667062f7f96d825/1200x630cq70/photo.jpg",
-    4: "https://s2-receitas.glbimg.com/hQRLe4WjJRwT2W38WkkiTfB-Xq0=/0x0:1200x675/984x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_1f540e0b94d8437dbbc39d567a1dee68/internal_photos/bs/2024/U/5/zFCpZnRSaZdXZ1NdvFaQ/quiche-de-espinafre.jpg",
-    5: "https://i.ytimg.com/vi/QFMxJWh3mqE/maxresdefault.jpg",
-    6: "https://nazareuniluz.org.br/wp-content/uploads/2023/08/institucional-blog-receitas-curry-de-grao-de-bico.jpg",
-    7: "https://i.ytimg.com/vi/cc8QuY7seFQ/maxresdefault.jpg",
-    8: "https://assets.tmecosys.cn/image/upload/t_web767x639/img/recipe/vimdb/269097.jpg",
-    9: "https://i.ytimg.com/vi/VJ1yk-YdUto/maxresdefault.jpg",
-  };
+  const irParaReceita = (id: number) => router.replace(`/receita/${id}`);
+  const irParaCategoria = (catId: string) =>
+    router.replace({ pathname: "/search", params: { type: catId, q: "" } });
+
+  if (!user) return null;
 
   return (
-    <View style={styles.mainContainer}>
+    <View style={styles.container}>
       <StatusBar backgroundColor="#111827" barStyle="light-content" />
 
+      {/* Header com decorações */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Sabores Caseiros</Text>
-            <Text style={styles.headerSubtitle}>
-              Descubra receitas incríveis
+        {/* Elementos decorativos */}
+        <View style={styles.headerDecoration1} />
+        <View style={styles.headerDecoration2} />
+        <View style={styles.headerDecoration3} />
+
+        <Animated.View
+          style={[
+            styles.headerContent,
+            {
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>
+              Olá, {user.nome}! <Text style={styles.waveEmoji}>👋</Text>
             </Text>
+            <Text style={styles.subtitle}>O que vamos cozinhar hoje?</Text>
           </View>
-        </View>
+
+          <TouchableOpacity
+            onPress={() => setDropdownVisible(!dropdownVisible)}
+            style={styles.profileButton}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.profileButtonText}>Perfil</Text>
+            <Text style={styles.profileButtonIcon}>▼</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
+      {/* Dropdown posicionado absolutamente para ficar por cima de tudo */}
+      {dropdownVisible && (
+        <>
+          <TouchableOpacity
+            style={styles.overlay}
+            onPress={() => setDropdownVisible(false)}
+            activeOpacity={1}
+          />
+          <View style={styles.dropdown}>
+            <View style={styles.dropdownArrow} />
+            <View style={styles.dropdownHeader}>
+              <View style={styles.userAvatarSmall}>
+                <Text style={styles.userAvatarText}>
+                  {user.nome?.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.dropdownUserName} numberOfLines={1}>
+                {user.nome}
+              </Text>
+            </View>
+            <View style={styles.dropdownDivider} />
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => {
+                router.replace("/change-password");
+                setDropdownVisible(false);
+              }}
+            >
+              <Text style={styles.dropdownItemIcon}>🔑</Text>
+              <Text style={styles.dropdownText}>Alterar Senha</Text>
+            </TouchableOpacity>
+
+            <View style={styles.dropdownDivider} />
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={async () => {
+                await logout();
+              }}
+            >
+              <Text style={styles.dropdownItemIcon}>🚪</Text>
+              <Text style={[styles.dropdownText, styles.logoutText]}>Sair</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
       <ScrollView
-        style={styles.container}
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Search Section */}
         <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
+            <View style={styles.searchIcon}>
+              <Text style={styles.searchIconText}>🔍</Text>
+            </View>
             <TextInput
               style={styles.searchInput}
-              placeholder="Busque por uma receita..."
-              placeholderTextColor="#6b7280"
+              placeholder="Buscar receitas deliciosas..."
+              placeholderTextColor="#9ca3af"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
             />
-            <TouchableOpacity style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>Buscar</Text>
-            </TouchableOpacity>
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={handleSearchSubmit}
+                style={styles.searchButton}
+              >
+                <Text style={styles.searchButtonText}>Buscar</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Destaques</Text>
+        {/* Featured Recipes */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>✨ Receitas em Destaque</Text>
+            <Text style={styles.sectionSubtitle}>
+              Descobertas especiais para você
+            </Text>
+          </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#d1545e" />
-              <Text style={styles.loadingText}>Carregando receitas...</Text>
+              <ActivityIndicator size="large" color="#6366f1" />
+              <Text style={styles.loadingText}>Carregando delícias...</Text>
+            </View>
+          ) : destaques.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateEmoji}>🍽️</Text>
+              <Text style={styles.emptyStateText}>
+                Ainda não há receitas cadastradas
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Seja o primeiro a compartilhar uma receita incrível!
+              </Text>
             </View>
           ) : (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredContainer}
+              contentContainerStyle={styles.featuredScroll}
             >
-              {featuredRecipes.map((recipe) => (
-                <TouchableOpacity
-                  key={recipe.id}
-                  style={styles.featuredCard}
-                  onPress={() => router.push(`/receita/${recipe.id}`)}
-                >
-                  <ImageBackground
-                    source={{
-                      uri:
-                        imageMap[recipe.id] ||
-                        "https://gourmetjr.com.br/wp-content/uploads/2018/03/JPEG-image-B6230B799E47-1_1170x600_acf_cropped_490x292_acf_cropped.jpeg",
-                    }}
-                    style={styles.featuredImage}
-                    imageStyle={{ borderRadius: 16 }}
+              {destaques.map((receita, index) => {
+                const img =
+                  receita.imagens?.[0]?.dataBase64 ??
+                  "https://images.unsplash.com/photo-1546548970-71785318a17b?w=400";
+
+                return (
+                  <TouchableOpacity
+                    key={receita.id}
+                    style={[
+                      styles.featuredCard,
+                      { marginLeft: index === 0 ? 20 : 0 },
+                    ]}
+                    onPress={() => irParaReceita(receita.id)}
+                    activeOpacity={0.9}
                   >
-                    <View style={styles.featuredOverlay}>
-                      <Text style={styles.featuredTitle}>{recipe.receita}</Text>
-                      <View style={styles.tagContainer}>
-                        <Text style={styles.recipeTag}>{recipe.tipo}</Text>
+                    <ImageBackground
+                      source={{ uri: img }}
+                      style={styles.featuredImage}
+                      imageStyle={styles.featuredImageStyle}
+                    >
+                      <View style={styles.featuredGradient}>
+                        <View style={styles.featuredContent}>
+                          <View style={styles.featuredBadge}>
+                            <Text style={styles.featuredBadgeText}>
+                              {receita.tipo.replace(/_/g, " ")}
+                            </Text>
+                          </View>
+                          <Text style={styles.featuredTitle} numberOfLines={2}>
+                            {receita.titulo}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                  </ImageBackground>
-                </TouchableOpacity>
-              ))}
+                    </ImageBackground>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           )}
         </View>
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Categorias</Text>
-          <View style={styles.categoriesContainer}>
-            <TouchableOpacity
-              style={styles.categoryCard}
-              onPress={() => router.push("/receitas")}
-            >
-              <View
-                style={[styles.categoryIcon, { backgroundColor: "#f97316" }]}
-              >
-                <Text style={styles.categoryIconText}>🍲</Text>
-              </View>
-              <Text style={styles.categoryText}>Pratos Principais</Text>
-            </TouchableOpacity>
+        {/* Categories */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>🍳 Categorias</Text>
+            <Text style={styles.sectionSubtitle}>
+              Explore por tipo de receita
+            </Text>
+          </View>
 
-            <TouchableOpacity
-              style={styles.categoryCard}
-              onPress={() => router.push("/receitas")}
-            >
-              <View
-                style={[styles.categoryIcon, { backgroundColor: "#84cc16" }]}
+          <View style={styles.categoriesGrid}>
+            {categorias.map((categoria, index) => (
+              <TouchableOpacity
+                key={categoria.id}
+                style={[
+                  styles.categoryCard,
+                  {
+                    backgroundColor: categoria.cor + "15",
+                    borderColor: categoria.cor + "30",
+                  },
+                ]}
+                onPress={() => irParaCategoria(categoria.id)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.categoryIconText}>🥗</Text>
-              </View>
-              <Text style={styles.categoryText}>Saladas</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.categoryCard}
-              onPress={() => router.push("/receitas")}
-            >
-              <View
-                style={[styles.categoryIcon, { backgroundColor: "#f43f5e" }]}
-              >
-                <Text style={styles.categoryIconText}>🍰</Text>
-              </View>
-              <Text style={styles.categoryText}>Sobremesas</Text>
-            </TouchableOpacity>
+                <View
+                  style={[
+                    styles.categoryIcon,
+                    { backgroundColor: categoria.cor },
+                  ]}
+                >
+                  <Text style={styles.categoryEmoji}>{categoria.emoji}</Text>
+                </View>
+                <Text style={styles.categoryLabel} numberOfLines={1}>
+                  {categoria.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        <View style={styles.allRecipesContainer}>
+        {/* Create Recipe CTA */}
+        <View style={styles.ctaSection}>
           <TouchableOpacity
-            onPress={() => router.push("/receitas")}
-            style={styles.allRecipesButton}
+            onPress={() => router.replace("/create-receita")}
+            style={styles.ctaButton}
+            activeOpacity={0.9}
           >
-            <Text style={styles.allRecipesButtonText}>
-              Ver todas as receitas
-            </Text>
+            <View style={styles.ctaContent}>
+              <View style={styles.ctaIcon}>
+                <Text style={styles.ctaIconText}>✨</Text>
+              </View>
+              <View style={styles.ctaTextContainer}>
+                <Text style={styles.ctaTitle}>Criar Nova Receita</Text>
+                <Text style={styles.ctaSubtitle}>
+                  Compartilhe sua criação culinária
+                </Text>
+              </View>
+              <Text style={styles.ctaArrow}>→</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -203,200 +344,435 @@ export default function HomeScreen() {
   );
 }
 
-const { width } = Dimensions.get("window");
-const cardWidth = width * 0.7;
+const { width, height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
-  mainContainer: {
+  container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#ffffff",
   },
   header: {
     backgroundColor: "#111827",
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 24,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    position: "relative",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+    overflow: "hidden", // Para conter as decorações
+  },
+  // Elementos decorativos do header
+  headerDecoration1: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(99, 102, 241, 0.15)",
+    top: -50,
+    left: -50,
+  },
+  headerDecoration2: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(236, 72, 153, 0.1)",
+    bottom: -30,
+    right: 30,
+  },
+  headerDecoration3: {
+    position: "absolute",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    top: 40,
+    right: -20,
   },
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    zIndex: 1,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  backButtonText: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  headerTextContainer: {
+  headerLeft: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
+  greeting: {
+    fontSize: 26,
+    fontWeight: "700",
     color: "#ffffff",
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
-  headerSubtitle: {
+  waveEmoji: {
+    fontSize: 24,
+  },
+  subtitle: {
     fontSize: 16,
     color: "#e5e7eb",
-    marginTop: 4,
+    fontWeight: "400",
+    letterSpacing: 0.3,
   },
-  container: {
+  profileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#4f46e5",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: "#4f46e5",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  profileButtonText: {
+    color: "#ffffff",
+    fontWeight: "600",
+    fontSize: 15,
+    marginRight: 6,
+  },
+  profileButtonIcon: {
+    color: "#ffffff",
+    fontSize: 12,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    zIndex: 998,
+  },
+  dropdown: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 110 : 100,
+    right: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    width: 220,
+    zIndex: 999,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  dropdownArrow: {
+    position: "absolute",
+    top: -8,
+    right: 20,
+    width: 16,
+    height: 16,
+    backgroundColor: "#ffffff",
+    transform: [{ rotate: "45deg" }],
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  dropdownHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  userAvatarSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#4f46e5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  userAvatarText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  dropdownUserName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0f172a",
     flex: 1,
   },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  dropdownItemIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: "#0f172a",
+    fontWeight: "500",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+  },
+  logoutText: {
+    color: "#ef4444",
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
   searchSection: {
     paddingHorizontal: 20,
-    marginTop: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
+    backgroundColor: "#ffffff",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    shadowColor: "#000",
+    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 2,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchIconText: {
+    fontSize: 18,
   },
   searchInput: {
     flex: 1,
-    height: 50,
+    height: 48,
     fontSize: 16,
-    color: "#111827",
+    color: "#0f172a",
+    fontWeight: "400",
+    backgroundColor: "transparent",
   },
   searchButton: {
-    backgroundColor: "#d1545e",
-    borderRadius: 8,
+    backgroundColor: "#6366f1",
+    borderRadius: 10,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   searchButtonText: {
     color: "#ffffff",
     fontWeight: "600",
+    fontSize: 14,
   },
-  sectionContainer: {
-    marginTop: 24,
+  section: {
+    marginBottom: 36,
+    backgroundColor: "#ffffff",
+  },
+  sectionHeader: {
     paddingHorizontal: 20,
+    marginBottom: 20,
+    alignItems: "flex-start",
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    color: "#64748b",
+    fontWeight: "400",
   },
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
-    height: 200,
+    paddingVertical: 60,
+    backgroundColor: "#ffffff",
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 16,
-    color: "#6b7280",
+    color: "#64748b",
+    fontWeight: "500",
   },
-  featuredContainer: {
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+    backgroundColor: "#ffffff",
+  },
+  emptyStateEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptyStateSubtext: {
+    fontSize: 16,
+    color: "#64748b",
+    textAlign: "center",
+  },
+  featuredScroll: {
     paddingRight: 20,
   },
   featuredCard: {
-    width: cardWidth,
-    height: 180,
+    width: width * 0.75,
+    height: 200,
     marginRight: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    backgroundColor: "#ffffff",
   },
   featuredImage: {
     width: "100%",
     height: "100%",
     justifyContent: "flex-end",
   },
-  featuredOverlay: {
+  featuredImageStyle: {
+    borderRadius: 20,
+  },
+  featuredGradient: {
     backgroundColor: "rgba(0,0,0,0.4)",
-    padding: 16,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    padding: 20,
+  },
+  featuredContent: {
+    alignItems: "flex-start",
+  },
+  featuredBadge: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  featuredBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0f172a",
+    textTransform: "capitalize",
   },
   featuredTitle: {
-    color: "#ffffff",
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  tagContainer: {
-    flexDirection: "row",
-  },
-  recipeTag: {
-    fontSize: 12,
+    fontWeight: "700",
     color: "#ffffff",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-    overflow: "hidden",
+    lineHeight: 24,
   },
-  categoriesContainer: {
+  categoriesGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
     justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   categoryCard: {
-    width: "30%",
+    width: (width - 48) / 3,
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8fafc",
     borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    paddingVertical: 20,
+    paddingHorizontal: 8,
+    marginBottom: 16,
+    marginHorizontal: 2,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 1,
   },
   categoryIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
-  },
-  categoryIconText: {
-    fontSize: 24,
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#111827",
-    textAlign: "center",
-  },
-  allRecipesContainer: {
-    marginTop: 32,
-    paddingHorizontal: 20,
-  },
-  allRecipesButton: {
-    backgroundColor: "#111827",
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    shadowColor: "#000",
+    marginBottom: 12,
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  allRecipesButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
+  categoryEmoji: {
+    fontSize: 24,
+  },
+  categoryLabel: {
+    fontSize: 14,
     fontWeight: "600",
+    color: "#0f172a",
+    textAlign: "center",
+  },
+  ctaSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    backgroundColor: "#ffffff",
+  },
+  ctaButton: {
+    backgroundColor: "#6366f1",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  ctaContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ctaIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  ctaIconText: {
+    fontSize: 24,
+  },
+  ctaTextContainer: {
+    flex: 1,
+  },
+  ctaTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#ffffff",
+    marginBottom: 4,
+  },
+  ctaSubtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "400",
+  },
+  ctaArrow: {
+    fontSize: 24,
+    color: "#ffffff",
+    fontWeight: "300",
   },
 });

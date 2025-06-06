@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -11,30 +11,65 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
-  ImageBackground,
+  FlatList,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import axios from "axios";
+import api from "@/services/api";
+import { AuthContext } from "../context/AuthContext";
 
 type Receita = {
   id: number;
-  receita: string;
+  titulo: string;
+  descricao: string;
   tipo: string;
-  ingredientes: string;
-  modo_preparo: string;
+  publicada: boolean;
+  criadoEm: string;
+  atualizadaEm: string;
+  autor: {
+    id: number;
+    nome: string;
+    email: string;
+    criadoEm: string;
+  };
+  imagens: {
+    id: number;
+    contentType: string;
+    dataBase64: string;
+  }[];
+  ingredientes: {
+    id: number;
+    nome: string;
+    quantidade: string;
+  }[];
+  passo_a_passo: {
+    id: number;
+    ordemEtapa: number;
+    texto: string;
+  }[];
+  _count: {
+    curtidas: number;
+    favoritos: number;
+  };
+  curtidas: any[];
+  favoritos: any[];
 };
+
+const { width } = Dimensions.get("window");
 
 export default function ReceitaScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { token } = useContext(AuthContext);
   const [data, setData] = useState<Receita>();
   const [loading, setLoading] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | null>(
     "ingredientes"
   );
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
+  const flatListRef = useRef<FlatList>(null);
   const sectionAnimations = {
     ingredientes: useRef(new Animated.Value(0)).current,
     preparo: useRef(new Animated.Value(0)).current,
@@ -44,12 +79,14 @@ export default function ReceitaScreen() {
   async function fetchContent() {
     setLoading(true);
     try {
-      const response: Receita = await axios
-        .get(`https://api-receitas-pi.vercel.app/receitas/${id}`)
-        .then((response) => {
-          return response.data;
-        });
-      return response;
+      const headers: any = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await api.get(`/receitas/${id}`, { headers });
+      console.log(data);
+      return response.data;
     } catch (error) {
       console.error("Error fetching recipe:", error);
       return null;
@@ -72,18 +109,6 @@ export default function ReceitaScreen() {
     }
     retrieve();
   }, []);
-
-  const imageMap: { [key: number]: string } = {
-    1: "https://villalvafrutas.com.br/wp-content/uploads/2020/08/Frango-agridoce.jpg",
-    2: "https://www.estadao.com.br/resizer/xgbdreke8bix84U4ILBWMO_KuX0=/arc-anglerfish-arc2-prod-estadao/public/3K45SRWMQBAMHEOCORS3HY2W5I.jpg",
-    3: "https://img-global.cpcdn.com/recipes/c667062f7f96d825/1200x630cq70/photo.jpg",
-    4: "https://s2-receitas.glbimg.com/hQRLe4WjJRwT2W38WkkiTfB-Xq0=/0x0:1200x675/984x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_1f540e0b94d8437dbbc39d567a1dee68/internal_photos/bs/2024/U/5/zFCpZnRSaZdXZ1NdvFaQ/quiche-de-espinafre.jpg",
-    5: "https://i.ytimg.com/vi/QFMxJWh3mqE/maxresdefault.jpg",
-    6: "https://nazareuniluz.org.br/wp-content/uploads/2023/08/institucional-blog-receitas-curry-de-grao-de-bico.jpg",
-    7: "https://i.ytimg.com/vi/cc8QuY7seFQ/maxresdefault.jpg",
-    8: "https://assets.tmecosys.cn/image/upload/t_web767x639/img/recipe/vimdb/269097.jpg",
-    9: "https://i.ytimg.com/vi/VJ1yk-YdUto/maxresdefault.jpg",
-  };
 
   const toggleSection = (section: string) => {
     if (expandedSection === section) {
@@ -108,7 +133,6 @@ export default function ReceitaScreen() {
           useNativeDriver: true,
         }
       ).start(() => {
-        // Then open the new section
         setExpandedSection(section);
         Animated.timing(
           sectionAnimations[section as keyof typeof sectionAnimations],
@@ -162,26 +186,75 @@ export default function ReceitaScreen() {
     extrapolate: "clamp",
   });
 
+  const onImageScroll = (event: any) => {
+    const slideSize = width;
+    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+    if (
+      index !== currentImageIndex &&
+      index >= 0 &&
+      index < (data?.imagens?.length || 0)
+    ) {
+      setCurrentImageIndex(index);
+    }
+  };
+
+  const renderImageSlide = ({ item, index }: { item: any; index: number }) => (
+    <View style={styles.slideContainer}>
+      <Image
+        source={{ uri: item.dataBase64 }}
+        style={styles.headerImage}
+        resizeMode="cover"
+        onLoad={() => {
+          console.log(`Imagem ${index + 1} carregada com sucesso!`);
+        }}
+      />
+      {/* Gradient overlay sutil */}
+      <View style={styles.imageGradientOverlay} />
+    </View>
+  );
+
+  const renderImageIndicators = () => {
+    if (!data?.imagens || data.imagens.length <= 1) return null;
+
+    return (
+      <View style={styles.indicatorContainer}>
+        {data.imagens.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.indicator,
+              currentImageIndex === index && styles.activeIndicator,
+            ]}
+          />
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
       <Animated.View style={[styles.header, { height: headerHeight }]}>
-        {data && (
-          <Animated.View
-            style={[styles.headerImageContainer, { opacity: imageOpacity }]}
-          >
-            <Image
-              source={{
-                uri:
-                  imageMap[data.id] ||
-                  "https://gourmetjr.com.br/wp-content/uploads/2018/03/JPEG-image-B6230B799E47-1_1170x600_acf_cropped_490x292_acf_cropped.jpeg",
-              }}
-              style={styles.headerImage}
-              resizeMode="cover"
+        {data && data.imagens && data.imagens.length > 0 && (
+          <View style={styles.headerImageContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={data.imagens}
+              renderItem={renderImageSlide}
+              keyExtractor={(item) => item.id.toString()}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={onImageScroll}
+              scrollEventThrottle={16}
+              decelerationRate="fast"
+              snapToInterval={width}
+              snapToAlignment="start"
+              bounces={false}
             />
-            <View style={styles.headerImageOverlay} />
-          </Animated.View>
+            {renderImageIndicators()}
+          </View>
         )}
 
         <Animated.View
@@ -193,7 +266,7 @@ export default function ReceitaScreen() {
 
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.replace("/home")}
           activeOpacity={0.7}
         >
           <Text style={styles.backButtonText}>←</Text>
@@ -211,7 +284,7 @@ export default function ReceitaScreen() {
           ]}
         >
           <Text style={styles.headerTitle} numberOfLines={2}>
-            {data?.receita || "Carregando..."}
+            {data?.titulo || "Carregando..."}
           </Text>
           {data && (
             <View style={styles.categoryBadge}>
@@ -240,20 +313,31 @@ export default function ReceitaScreen() {
           <View style={styles.contentContainer}>
             <View style={styles.infoCard}>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Tempo de Preparo</Text>
-                <Text style={styles.infoValue}>30 min</Text>
+                <Text style={styles.infoLabel}>Curtidas</Text>
+                <Text style={styles.infoValue}>
+                  {data?._count?.curtidas || 0}
+                </Text>
               </View>
               <View style={styles.infoSeparator} />
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Porções</Text>
-                <Text style={styles.infoValue}>4 pessoas</Text>
+                <Text style={styles.infoLabel}>Favoritos</Text>
+                <Text style={styles.infoValue}>
+                  {data?._count?.favoritos || 0}
+                </Text>
               </View>
               <View style={styles.infoSeparator} />
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Dificuldade</Text>
-                <Text style={styles.infoValue}>Média</Text>
+                <Text style={styles.infoLabel}>Chef</Text>
+                <Text style={styles.infoValue}>{data?.autor?.nome}</Text>
               </View>
             </View>
+
+            {data?.descricao && (
+              <View style={styles.descriptionCard}>
+                <Text style={styles.descriptionTitle}>Sobre a Receita</Text>
+                <Text style={styles.descriptionText}>{data.descricao}</Text>
+              </View>
+            )}
 
             <Pressable
               style={[
@@ -290,10 +374,12 @@ export default function ReceitaScreen() {
                     },
                   ]}
                 >
-                  {data.ingredientes.split(/\s*,\s*/).map((item, index) => (
-                    <View key={index} style={styles.ingredientItem}>
+                  {data.ingredientes.map((ingrediente, index) => (
+                    <View key={ingrediente.id} style={styles.ingredientItem}>
                       <View style={styles.bullet} />
-                      <Text style={styles.ingredientText}>{item.trim()}</Text>
+                      <Text style={styles.ingredientText}>
+                        {ingrediente.quantidade} {ingrediente.nome}
+                      </Text>
                     </View>
                   ))}
                 </Animated.View>
@@ -334,15 +420,16 @@ export default function ReceitaScreen() {
                     },
                   ]}
                 >
-                  {data.modo_preparo
-                    .split(/\s*\d+\.\s*/)
-                    .filter(Boolean)
-                    .map((step, index) => (
-                      <View key={index} style={styles.stepItem}>
+                  {data.passo_a_passo
+                    .sort((a, b) => a.ordemEtapa - b.ordemEtapa)
+                    .map((passo, index) => (
+                      <View key={passo.id} style={styles.stepItem}>
                         <View style={styles.stepNumber}>
-                          <Text style={styles.stepNumberText}>{index + 1}</Text>
+                          <Text style={styles.stepNumberText}>
+                            {passo.ordemEtapa}
+                          </Text>
                         </View>
-                        <Text style={styles.stepText}>{step.trim()}</Text>
+                        <Text style={styles.stepText}>{passo.texto}</Text>
                       </View>
                     ))}
                 </Animated.View>
@@ -384,9 +471,9 @@ export default function ReceitaScreen() {
                   ]}
                 >
                   <Text style={styles.tipText}>
-                    Para um {data?.receita.toLowerCase()} perfeito,
-                    certifique-se de que todos os ingredientes estejam na
-                    temperatura ambiente antes de começar.
+                    Para um resultado perfeito, certifique-se de que todos os
+                    ingredientes estejam na temperatura ambiente antes de
+                    começar.
                   </Text>
                   <Text style={styles.tipText}>
                     Você pode substituir alguns ingredientes por alternativas
@@ -399,26 +486,12 @@ export default function ReceitaScreen() {
                 </Animated.View>
               )}
             </Pressable>
-
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity style={styles.actionButton}>
-                <Text style={styles.actionButtonIcon}>🔖</Text>
-                <Text style={styles.actionButtonText}>Salvar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.actionButton}>
-                <Text style={styles.actionButtonIcon}>🔄</Text>
-                <Text style={styles.actionButtonText}>Compartilhar</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </Animated.ScrollView>
       )}
     </View>
   );
 }
-
-const { width } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
@@ -438,20 +511,58 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    height: 300, // Altura fixa
+    zIndex: 1,
+  },
+  slideContainer: {
+    width: width,
+    height: 300, // Altura fixa para o header
+    position: "relative",
+  },
+  imageGradientOverlay: {
+    position: "absolute",
     bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: "transparent",
   },
   headerImage: {
     width: "100%",
     height: "100%",
+    backgroundColor: "#f0f0f0", // Fallback enquanto carrega
   },
-  headerImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
+  // headerImageOverlay: {
+  //   ...StyleSheet.absoluteFillObject,
+  //   backgroundColor: "rgba(0,0,0,0.4)",
+  // },
+  indicatorContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    zIndex: 3,
   },
-  headerBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#111827",
+
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.5)",
   },
+  activeIndicator: {
+    backgroundColor: "#FFFFFF",
+    width: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+
   backButton: {
     position: "absolute",
     top: 50,
@@ -459,22 +570,30 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
   },
+
+  headerTitleContainer: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20,
+    zIndex: 5,
+  },
+  headerBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#111827",
+  },
+
   backButtonText: {
     color: "#FFFFFF",
     fontSize: 24,
     fontWeight: "bold",
   },
-  headerTitleContainer: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-  },
+
   headerTitle: {
     fontSize: 32,
     fontWeight: "bold",
@@ -547,6 +666,27 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: "#e5e7eb",
     marginHorizontal: 8,
+  },
+  descriptionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  descriptionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: "#4b5563",
+    lineHeight: 24,
   },
   card: {
     backgroundColor: "#FFFFFF",
@@ -659,20 +799,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    flex: 1,
+    marginHorizontal: 4,
+    justifyContent: "center",
   },
   actionButtonIcon: {
     fontSize: 18,
-    marginRight: 8,
+    marginRight: 6,
   },
   actionButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
     color: "#111827",
   },
